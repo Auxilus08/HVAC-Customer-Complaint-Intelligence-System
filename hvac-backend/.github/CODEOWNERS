@@ -1,0 +1,22 @@
+# Global owner — required review on all PRs
+* @auxilus
+
+# API layer
+app/api/               @auxilus
+app/schemas/           @auxilus
+
+# Database / migrations
+app/db/                @auxilus
+app/models/            @auxilus
+alembic/               @auxilus
+
+# Workers / ML interface
+app/workers/           @auxilus
+
+# Security — PII stripping requires explicit review
+app/core/security.py   @auxilus
+
+# Infrastructure
+Dockerfile             @auxilus
+docker-compose.yml     @auxilus
+Makefile               @auxilus

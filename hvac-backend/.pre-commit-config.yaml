@@ -1,0 +1,55 @@
+repos:
+  # ── Ruff: lint + format ──────────────────────────────────────────────────────
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.4.4
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  # ── Mypy: type checking ───────────────────────────────────────────────────────
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.10.0
+    hooks:
+      - id: mypy
+        additional_dependencies:
+          - pydantic>=2.9.0
+          - pydantic-settings>=2.5.0
+          - sqlalchemy[mypy]>=2.0.30
+          - types-redis>=4.6.0
+        args: [--ignore-missing-imports, app/]
+        pass_filenames: false
+
+  # ── General hygiene ───────────────────────────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: check-added-large-files
+        args: [--maxkb=500]
+      - id: check-case-conflict
+      - id: mixed-line-ending
+        args: [--fix=lf]
+
+  # ── Local project-specific hooks ─────────────────────────────────────────────
+  - repo: local
+    hooks:
+      - id: no-print-statements
+        name: No print() statements in app/
+        entry: python scripts/check_no_print.py
+        language: system
+        pass_filenames: false
+        types: [python]
+
+      - id: pii-strip-audit
+        name: PII strip called before DB write and Claude API call
+        entry: python scripts/check_pii_coverage.py
+        language: system
+        pass_filenames: false
+        always_run: true

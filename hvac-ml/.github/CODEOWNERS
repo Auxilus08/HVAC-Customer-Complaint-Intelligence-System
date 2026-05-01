@@ -1,0 +1,7 @@
+# Global owner
+* @auxilus
+
+# Core pipeline — clustering changes require review
+pipeline/clusterer.py  @auxilus
+pipeline/labeler.py    @auxilus
+pipeline/embedder.py   @auxilus

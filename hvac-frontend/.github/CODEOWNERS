@@ -1,0 +1,8 @@
+# Global owner
+* @auxilus
+
+# API integration layer
+src/api/               @auxilus
+
+# Components
+src/components/        @auxilus

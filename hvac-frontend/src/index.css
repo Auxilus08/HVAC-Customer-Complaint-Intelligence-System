@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply h-full bg-gray-950 text-gray-100;
+  }
+  body {
+    @apply h-full font-sans antialiased;
+  }
+  #root {
+    @apply h-full;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-gray-900 rounded-xl border border-gray-800 p-4;
+  }
+  .badge-critical {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-900 text-red-200;
+  }
+  .badge-high {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-900 text-orange-200;
+  }
+  .badge-medium {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-900 text-yellow-200;
+  }
+  .badge-normal {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-700 text-gray-300;
+  }
+  .badge-positive {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-900 text-green-200;
+  }
+}

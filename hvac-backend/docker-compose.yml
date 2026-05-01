@@ -1,0 +1,169 @@
+version: "3.9"
+
+# ── Shared defaults ────────────────────────────────────────────────────────────
+x-backend-base: &backend-base
+  build:
+    context: .
+    dockerfile: Dockerfile
+    target: runtime
+  env_file: .env
+  environment:
+    DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-hvac_user}:${POSTGRES_PASSWORD:-change_me_in_production}@postgres:5432/${POSTGRES_DB:-hvac_complaints}
+    DATABASE_SYNC_URL: postgresql+psycopg2://${POSTGRES_USER:-hvac_user}:${POSTGRES_PASSWORD:-change_me_in_production}@postgres:5432/${POSTGRES_DB:-hvac_complaints}
+    REDIS_URL: redis://redis:6379/0
+    CELERY_BROKER_URL: redis://redis:6379/0
+    CELERY_RESULT_BACKEND: redis://redis:6379/1
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  networks:
+    - hvac_network
+  restart: unless-stopped
+
+services:
+  # ── PostgreSQL 16 + pgvector ─────────────────────────────────────────────────
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: hvac_postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-hvac_complaints}
+      POSTGRES_USER: ${POSTGRES_USER:-hvac_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me_in_production}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    networks:
+      - hvac_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-hvac_user} -d ${POSTGRES_DB:-hvac_complaints}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # ── Redis 7 ──────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: hvac_redis
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 2gb
+      --maxmemory-policy allkeys-lru
+      --save 60 1
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - hvac_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  # ── FastAPI backend ───────────────────────────────────────────────────────────
+  backend:
+    <<: *backend-base
+    container_name: hvac_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app/app
+      - logs:/app/logs
+    command: >
+      uvicorn app.main:app
+      --host 0.0.0.0
+      --port 8000
+      --reload
+      --reload-dir /app/app
+      --log-config /dev/null
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ── Celery: embedding worker ─────────────────────────────────────────────────
+  embedding-worker:
+    <<: *backend-base
+    container_name: hvac_embedding_worker
+    volumes:
+      - logs:/app/logs
+    command: >
+      celery -A app.workers.celery_app.celery_app worker
+      --queues=embeddings
+      --concurrency=4
+      --loglevel=info
+      --logfile=/app/logs/embedding_worker.log
+      --hostname=embed@%h
+
+  # ── Celery: sentiment worker ─────────────────────────────────────────────────
+  sentiment-worker:
+    <<: *backend-base
+    container_name: hvac_sentiment_worker
+    command: >
+      celery -A app.workers.celery_app.celery_app worker
+      --queues=sentiment
+      --concurrency=8
+      --loglevel=info
+      --hostname=sentiment@%h
+
+  # ── Celery: batch worker (clustering, labeling, trends) ──────────────────────
+  batch-worker:
+    <<: *backend-base
+    container_name: hvac_batch_worker
+    command: >
+      celery -A app.workers.celery_app.celery_app worker
+      --queues=batch
+      --concurrency=1
+      --loglevel=info
+      --hostname=batch@%h
+
+  # ── Celery Beat scheduler ────────────────────────────────────────────────────
+  celery-beat:
+    <<: *backend-base
+    container_name: hvac_celery_beat
+    command: >
+      celery -A app.workers.celery_app.celery_app beat
+      --loglevel=info
+      --scheduler redbeat.RedBeatScheduler
+      --schedule=/tmp/celerybeat-schedule
+
+  # ── Flower: Celery monitoring (optional profile) ─────────────────────────────
+  flower:
+    image: mher/flower:2.0
+    container_name: hvac_flower
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
+      FLOWER_PORT: 5555
+    ports:
+      - "5555:5555"
+    networks:
+      - hvac_network
+    profiles:
+      - monitoring
+    restart: unless-stopped
+
+networks:
+  hvac_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    name: hvac_postgres_data
+  redis_data:
+    name: hvac_redis_data
+  logs:
+    name: hvac_logs

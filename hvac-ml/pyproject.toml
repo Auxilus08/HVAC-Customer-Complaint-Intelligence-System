@@ -1,0 +1,70 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hvac-ml"
+version = "0.1.0"
+description = "HVAC Complaint Intelligence — NLP pipeline and model code"
+requires-python = ">=3.11"
+dependencies = [
+    "sentence-transformers==2.7.0",
+    "umap-learn==0.5.6",
+    "hdbscan==0.8.38.post1",
+    "vaderSentiment==3.3.2",
+    "numpy>=2.0.0",
+    "scipy>=1.14.0",
+    "scikit-learn>=1.5.0",
+    "pandas>=2.3.0",
+    "google-generativeai>=0.8.0",
+    "pydantic>=2.9.0",
+    "pydantic-settings>=2.4.0",
+    "structlog==24.1.0",
+    "spacy>=3.8.2",
+    "python-dotenv==1.0.1",
+    "tqdm==4.66.4",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.2.0",
+    "pytest-cov==5.0.0",
+    "jupyter==1.0.0",
+    "ipykernel==6.29.4",
+    "ruff==0.4.4",
+    "mypy==1.10.0",
+    "pre-commit==3.7.1",
+    "factory-boy==3.3.0",
+    "faker==25.2.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["pipeline", "data"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "C4", "SIM", "TCH"]
+ignore = ["E501", "N818"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true
+plugins = ["pydantic.mypy"]
+exclude = ["notebooks/", "tests/"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=pipeline --cov-report=term-missing --cov-fail-under=70"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.coverage.run]
+source = ["pipeline"]
+omit = ["tests/*", "data/*", "notebooks/*"]

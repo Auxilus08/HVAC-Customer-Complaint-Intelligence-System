@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build output
+dist/
+build/
+
+# Vite
+.vite/
+*.local
+
+# Environment files — NEVER commit secrets
+.env
+.env.local
+.env.*.local
+
+# Testing
+coverage/
+.vitest/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Type checking
+*.tsbuildinfo
