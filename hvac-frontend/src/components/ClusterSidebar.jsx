@@ -123,8 +123,13 @@ export default function ClusterSidebar({ selectedId, onSelect }) {
             const trendValues = Array.isArray(trend)
               ? trend.map((t) => (typeof t === "number" ? t : t.count ?? 0))
               : null;
-            const exposure =
-              c.exposure_inr ?? c.cost_exposure ?? c.exposure ?? null;
+            const exposureRaw =
+              c.cost_exposure_estimate ??
+              c.exposure_inr ??
+              c.cost_exposure ??
+              c.exposure ??
+              null;
+            const exposure = exposureRaw != null ? Number(exposureRaw) : null;
             const memberCount = c.member_count ?? c.complaint_count ?? 0;
             const avg = c.avg_sentiment;
             const isEmerging = !!c.is_emerging;

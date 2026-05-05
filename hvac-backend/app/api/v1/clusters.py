@@ -6,9 +6,18 @@ from fastapi import APIRouter, Query
 
 from app.core.exceptions import ClusterNotFoundError
 from app.dependencies import DBSessionDep
-from app.schemas.cluster import AdvisoryResponse, ClusterDetail, ClusterListResponse
+from app.schemas.cluster import (
+    AdvisoryResponse,
+    ClusterDetail,
+    ClusterListResponse,
+    TrendPoint,
+)
 from app.services.advisory_service import generate_advisory
-from app.services.cluster_service import get_cluster_detail, list_clusters
+from app.services.cluster_service import (
+    get_cluster_detail,
+    get_cluster_trend,
+    list_clusters,
+)
 
 router = APIRouter(prefix="/clusters", tags=["clusters"])
 
@@ -46,6 +55,19 @@ async def get_cluster(
     if detail is None:
         raise ClusterNotFoundError(f"Cluster {cluster_id} not found")
     return detail
+
+
+@router.get(
+    "/{cluster_id}/trend",
+    response_model=list[TrendPoint],
+    summary="Daily complaint volume trend for a cluster",
+)
+async def get_trend(
+    cluster_id: int,
+    session: DBSessionDep,
+    days: int = Query(default=30, ge=1, le=180),
+) -> list[TrendPoint]:
+    return await get_cluster_trend(cluster_id, session, days=days)
 
 
 @router.get(

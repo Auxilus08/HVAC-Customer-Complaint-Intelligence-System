@@ -303,8 +303,18 @@ export default function ClusterDetail({ id, onBack }) {
   const color = clusterColor(cluster.id ?? id);
   const memberCount = cluster.member_count ?? cluster.complaint_count ?? 0;
   const avg = cluster.avg_sentiment;
-  const wow = cluster.wow_growth_pct ?? cluster.growth_pct ?? null;
-  const exposure = cluster.exposure_inr ?? cluster.cost_exposure ?? null;
+  const wow =
+    cluster.growth_pct_wow ??
+    cluster.wow_growth_pct ??
+    cluster.growth_pct ??
+    null;
+  const exposureRaw =
+    cluster.cost_exposure_estimate ??
+    cluster.exposure_inr ??
+    cluster.cost_exposure ??
+    null;
+  // cost_exposure_estimate is Numeric in DB → arrives as a string in JSON.
+  const exposure = exposureRaw != null ? Number(exposureRaw) : null;
   const isEmerging = !!cluster.is_emerging;
   const skus = cluster.top_skus || cluster.skus || [];
   const regions = cluster.top_regions || cluster.regions || [];

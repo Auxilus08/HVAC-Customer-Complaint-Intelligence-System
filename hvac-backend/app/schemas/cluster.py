@@ -7,6 +7,8 @@ from decimal import Decimal
 
 from pydantic import BaseModel, Field
 
+from app.schemas.complaint import ComplaintResponse
+
 
 class TrendPoint(BaseModel):
     date: str
@@ -40,6 +42,9 @@ class ClusterDetail(BaseModel):
     created_at: datetime
     last_run_id: str | None
     trend: list[TrendPoint] = Field(default_factory=list)
+    top_skus: list[str] = Field(default_factory=list)
+    top_regions: list[str] = Field(default_factory=list)
+    recent_complaints: list[ComplaintResponse] = Field(default_factory=list)
 
     model_config = {"from_attributes": True}
 

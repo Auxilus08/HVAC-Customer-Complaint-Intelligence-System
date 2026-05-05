@@ -42,9 +42,16 @@ export default function AlertBanner({ onClusterSelect }) {
           const id = a.cluster_id ?? a.id;
           const label = a.label || a.cluster_label || "Unlabeled cluster";
           const region = a.region || (Array.isArray(a.regions) ? a.regions[0] : null);
-          const wow = a.wow_growth_pct ?? a.growth_pct ?? a.wow ?? null;
+          const wow =
+            a.growth_pct_wow ?? a.wow_growth_pct ?? a.growth_pct ?? a.wow ?? null;
           const count = a.complaint_count ?? a.member_count ?? a.count ?? 0;
-          const exposure = a.exposure_inr ?? a.cost_exposure ?? a.exposure ?? null;
+          const exposureRaw =
+            a.cost_exposure_estimate ??
+            a.exposure_inr ??
+            a.cost_exposure ??
+            a.exposure ??
+            null;
+          const exposure = exposureRaw != null ? Number(exposureRaw) : null;
           return (
             <button
               key={`${id}-${label}`}

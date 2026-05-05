@@ -109,7 +109,7 @@ def compute_trends(self: TrendTask, run_id: str) -> dict:  # type: ignore[misc]
                     and t.current_week_count >= settings.MIN_COMPLAINTS_FOR_ALERT
                 )
 
-                cluster.growth_pct_wow = t.growth_pct / 100.0
+                cluster.growth_pct_wow = float(t.growth_pct)
                 cluster.is_emerging = is_emerging
                 cluster.avg_sentiment = (
                     float(avg_sent.get(cluster.id))
