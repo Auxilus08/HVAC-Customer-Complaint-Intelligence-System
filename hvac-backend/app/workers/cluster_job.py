@@ -19,7 +19,39 @@ from sqlalchemy import select, update
 from app.config import get_settings
 from app.workers.celery_app import celery_app
 
-logger = get_task_logger(__name__)
+_celery_logger = get_task_logger(__name__)
+
+
+class _KwargAdapter:
+    """Wrap stdlib celery logger so structlog-style ``key=value`` kwargs
+    are formatted into the message instead of crashing logging.Logger._log."""
+
+    def __init__(self, base):
+        self._base = base
+
+    def _fmt(self, msg, **kwargs):
+        if not kwargs:
+            return msg
+        extras = " ".join(f"{k}={v}" for k, v in kwargs.items())
+        return f"{msg} {extras}"
+
+    def info(self, msg, *args, **kwargs):
+        self._base.info(self._fmt(msg, **kwargs), *args)
+
+    def warning(self, msg, *args, **kwargs):
+        self._base.warning(self._fmt(msg, **kwargs), *args)
+
+    def error(self, msg, *args, **kwargs):
+        self._base.error(self._fmt(msg, **kwargs), *args)
+
+    def exception(self, msg, *args, **kwargs):
+        self._base.exception(self._fmt(msg, **kwargs), *args)
+
+    def debug(self, msg, *args, **kwargs):
+        self._base.debug(self._fmt(msg, **kwargs), *args)
+
+
+logger = _KwargAdapter(_celery_logger)
 settings = get_settings()
 
 
@@ -49,7 +81,7 @@ def run_nightly_batch(self: ClusterTask) -> dict:  # type: ignore[misc]
     import asyncio
 
     run_id = (
-        f"run_{datetime.now(tz=UTC).strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}"
+        f"run_{datetime.now(tz=UTC).replace(tzinfo=None).strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:6]}"
     )
     logger.info("nightly_batch_started", run_id=run_id)
 
@@ -64,7 +96,7 @@ def run_nightly_batch(self: ClusterTask) -> dict:  # type: ignore[misc]
         async with self.session_factory() as session:
             run_log = BatchRunLog(
                 run_id=run_id,
-                started_at=datetime.now(tz=UTC),
+                started_at=datetime.now(tz=UTC).replace(tzinfo=None),
                 status="running",
             )
             session.add(run_log)
@@ -82,7 +114,7 @@ def run_nightly_batch(self: ClusterTask) -> dict:  # type: ignore[misc]
                 logger.warning("nightly_batch_insufficient_data", count=len(rows))
                 run_log.status = "skipped"
                 run_log.complaints_processed = len(rows)
-                run_log.completed_at = datetime.now(tz=UTC)
+                run_log.completed_at = datetime.now(tz=UTC).replace(tzinfo=None)
                 await session.commit()
                 return {"status": "skipped", "reason": "insufficient_data"}
 
@@ -107,22 +139,40 @@ def run_nightly_batch(self: ClusterTask) -> dict:  # type: ignore[misc]
                     "clusterer returned arrays whose length does not match input ids"
                 )
 
-            # ── Upsert cluster rows ───────────────────────────────────────
+            # ── Upsert cluster rows (match by fingerprint to avoid unbounded growth)
             cluster_id_map: dict[int, int] = {}  # hdbscan_label -> DB id
             for hdb_label, size in cluster_result.cluster_sizes.items():
                 mask = cluster_result.labels == hdb_label
                 centroid = embeddings[mask].mean(axis=0).tolist()
+                fp_hash = cluster_result.fingerprints[hdb_label]
 
-                cluster_row = Cluster(
-                    centroid=centroid,
-                    member_count=int(size),
-                    last_run_id=run_id,
-                    is_emerging=False,
-                    fingerprint_hash=cluster_result.fingerprints[hdb_label],
+                # Try to find an existing cluster with the same fingerprint.
+                existing_result = await session.execute(
+                    select(Cluster).where(
+                        Cluster.fingerprint_hash == fp_hash
+                    ).limit(1)
                 )
-                session.add(cluster_row)
-                await session.flush()
-                cluster_id_map[hdb_label] = cluster_row.id
+                existing = existing_result.scalar_one_or_none()
+
+                if existing is not None:
+                    # Update existing cluster row in place.
+                    existing.centroid = centroid
+                    existing.member_count = int(size)
+                    existing.last_run_id = run_id
+                    existing.is_emerging = False
+                    cluster_id_map[hdb_label] = existing.id
+                else:
+                    # Genuinely new cluster pattern — create a new row.
+                    cluster_row = Cluster(
+                        centroid=centroid,
+                        member_count=int(size),
+                        last_run_id=run_id,
+                        is_emerging=False,
+                        fingerprint_hash=fp_hash,
+                    )
+                    session.add(cluster_row)
+                    await session.flush()
+                    cluster_id_map[hdb_label] = cluster_row.id
 
             # ── Update complaints with cluster assignments ─────────────────
             for i, complaint_id in enumerate(ids):
@@ -135,7 +185,7 @@ def run_nightly_batch(self: ClusterTask) -> dict:  # type: ignore[misc]
                         cluster_id=db_cluster_id,
                         hdbscan_conf=float(cluster_result.probabilities[i]),
                         status="processed",
-                        processed_at=datetime.now(tz=UTC),
+                        processed_at=datetime.now(tz=UTC).replace(tzinfo=None),
                     )
                 )
 
@@ -150,7 +200,7 @@ def run_nightly_batch(self: ClusterTask) -> dict:  # type: ignore[misc]
                 session.add(coord)
 
             run_log.status = "completed"
-            run_log.completed_at = datetime.now(tz=UTC)
+            run_log.completed_at = datetime.now(tz=UTC).replace(tzinfo=None)
             run_log.complaints_processed = len(ids)
             run_log.clusters_found = cluster_result.n_clusters
             sil = cluster_result.silhouette_score
@@ -185,9 +235,7 @@ def run_nightly_batch(self: ClusterTask) -> dict:  # type: ignore[misc]
         }
 
     try:
-        loop = asyncio.new_event_loop()
-        result = loop.run_until_complete(_run())
-        loop.close()
+        result = asyncio.run(_run())
         return result
     except Exception as exc:
         logger.exception("nightly_batch_failed", run_id=run_id, error=str(exc))

@@ -43,13 +43,9 @@ class Settings(BaseSettings):
     CELERY_BROKER_URL: str = Field(default="redis://localhost:6379/0")
     CELERY_RESULT_BACKEND: str = Field(default="redis://localhost:6379/1")
 
-    # ── Anthropic (advisory service) ────────────────────────────────────────
-    ANTHROPIC_API_KEY: str = Field(default="")
-    CLAUDE_MODEL: str = Field(default="claude-opus-4-7")
-
-    # ── Google Generative AI (cluster labeling) ───────────────────────────
+    # ── Google Generative AI (cluster labeling + advisory) ───────────────
     GOOGLE_API_KEY: str = Field(default="")
-    GEMINI_MODEL: str = Field(default="gemini-2.5-flash")
+    GEMINI_MODEL: str = Field(default="gemini-2.5-flash-lite")
 
     # ── Encryption ────────────────────────────────────────────────────────────
     RAW_TEXT_ENCRYPTION_KEY: str = Field(default="")

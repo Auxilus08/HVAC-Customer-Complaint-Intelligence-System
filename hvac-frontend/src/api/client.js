@@ -1,24 +1,34 @@
 import axios from "axios";
 
 const client = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "",
-  timeout: 15_000,
+  baseURL: "/api/v1",
+  timeout: 30000,
   headers: { "Content-Type": "application/json" },
 });
 
+client.interceptors.request.use((config) => {
+  const id =
+    typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `req-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  config.headers["X-Request-ID"] = id;
+  return config;
+});
+
 client.interceptors.response.use(
-  (response) => response,
+  (response) => response.data,
   (error) => {
-    const status = error.response?.status;
-    const detail = error.response?.data?.detail ?? error.message;
-
-    if (status === 422) {
-      console.error("[API] Validation error:", detail);
-    } else if (status >= 500) {
-      console.error("[API] Server error:", detail);
-    }
-
-    return Promise.reject(error);
+    const message =
+      error.response?.data?.message ||
+      error.response?.data?.detail ||
+      error.message ||
+      "Unknown error";
+    const code = error.response?.data?.error || "NETWORK_ERROR";
+    return Promise.reject({
+      message,
+      code,
+      status: error.response?.status,
+    });
   }
 );
 

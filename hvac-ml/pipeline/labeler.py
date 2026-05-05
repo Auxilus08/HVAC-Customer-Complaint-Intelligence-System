@@ -64,7 +64,20 @@ class ClusterLabeler:
         self.jaccard_threshold = jaccard_threshold
         self.sample_limit = sample_limit
         _key = api_key or os.environ.get("GOOGLE_API_KEY", "")
-        genai.configure(api_key=_key)
+
+        # genai.configure() sets the API key GLOBALLY at the module level —
+        # a second ClusterLabeler with a different key silently clobbers the
+        # first. Guard against this until we migrate to google.genai.Client().
+        if not hasattr(genai, "_hvac_configured_key"):
+            genai.configure(api_key=_key)
+            genai._hvac_configured_key = _key  # type: ignore[attr-defined]
+        elif genai._hvac_configured_key != _key:  # type: ignore[attr-defined]
+            raise RuntimeError(
+                "Cannot create ClusterLabeler with a different API key — "
+                "google.generativeai.configure() is module-global. "
+                "Use the same key or restart the process."
+            )
+
         self._client = genai.GenerativeModel(
             model_name=self.model,
             system_instruction=_LABEL_SYSTEM_PROMPT,

@@ -1,36 +1,61 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   html {
-    @apply h-full bg-gray-950 text-gray-100;
+    @apply bg-surface text-slate-100 font-sans antialiased;
   }
   body {
-    @apply h-full font-sans antialiased;
+    @apply bg-surface;
   }
-  #root {
-    @apply h-full;
+  * {
+    @apply border-surface-border;
+  }
+  ::-webkit-scrollbar {
+    @apply w-1.5 h-1.5;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-surface;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-surface-border rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-500;
   }
 }
 
 @layer components {
   .card {
-    @apply bg-gray-900 rounded-xl border border-gray-800 p-4;
+    @apply bg-surface-card border border-surface-border rounded-xl p-4 shadow-lg;
+  }
+  .btn-primary {
+    @apply bg-accent hover:bg-accent-dark text-white font-medium px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2;
+  }
+  .btn-ghost {
+    @apply bg-transparent hover:bg-surface-hover text-slate-300 hover:text-white px-3 py-1.5 rounded-lg transition-colors inline-flex items-center justify-center gap-1.5;
   }
   .badge-critical {
-    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-900 text-red-200;
+    @apply bg-critical/20 text-critical text-xs px-2 py-0.5 rounded-full font-medium;
   }
   .badge-high {
-    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-900 text-orange-200;
-  }
-  .badge-medium {
-    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-900 text-yellow-200;
+    @apply bg-high/20 text-high text-xs px-2 py-0.5 rounded-full font-medium;
   }
   .badge-normal {
-    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-700 text-gray-300;
+    @apply bg-normal/20 text-normal text-xs px-2 py-0.5 rounded-full font-medium;
   }
   .badge-positive {
-    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-900 text-green-200;
+    @apply bg-positive/20 text-positive text-xs px-2 py-0.5 rounded-full font-medium;
+  }
+  .badge-emerging {
+    @apply bg-accent/20 text-accent text-xs px-2 py-0.5 rounded-full font-medium animate-pulse-slow;
+  }
+  .chip {
+    @apply bg-surface-hover text-slate-300 px-3 py-1 rounded-full text-sm whitespace-nowrap;
+  }
+  .demo-highlight {
+    @apply ring-2 ring-accent ring-offset-2 ring-offset-surface rounded-xl transition-all;
   }
 }

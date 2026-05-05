@@ -24,7 +24,7 @@ class Complaint(Base):
     customer_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)
     technician_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)
     embedding: Mapped[list[float] | None] = mapped_column(Vector(384), nullable=True)
-    model_version: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    model_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
     cluster_id: Mapped[int | None] = mapped_column(nullable=True)
     hdbscan_conf: Mapped[float | None] = mapped_column(Float, nullable=True)
     sentiment_score: Mapped[float | None] = mapped_column(Float, nullable=True)

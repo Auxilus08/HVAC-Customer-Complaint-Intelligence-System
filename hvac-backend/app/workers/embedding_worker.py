@@ -6,7 +6,7 @@ This worker NEVER instantiates SentenceTransformer directly.
 
 from __future__ import annotations
 
-import json
+import asyncio
 from datetime import UTC, datetime
 
 from celery import Task
@@ -14,7 +14,6 @@ from celery.utils.log import get_task_logger
 from sqlalchemy import select
 
 from app.config import get_settings
-from app.core.security import compute_text_hash
 from app.workers.celery_app import celery_app
 
 logger = get_task_logger(__name__)
@@ -22,12 +21,11 @@ settings = get_settings()
 
 
 class EmbeddingTask(Task):
-    """Custom base task that holds a lazy-loaded Embedder, session factory, Redis."""
+    """Custom base task that holds a lazy-loaded Embedder and session factory."""
 
     abstract = True
     _embedder = None
     _session_factory = None
-    _redis = None
 
     @property
     def embedder(self):  # type: ignore[override]
@@ -50,14 +48,6 @@ class EmbeddingTask(Task):
             self._session_factory = get_session_factory()
         return self._session_factory
 
-    @property
-    def redis(self):
-        if self._redis is None:
-            import redis as sync_redis
-
-            self._redis = sync_redis.from_url(settings.REDIS_URL, decode_responses=True)
-        return self._redis
-
 
 @celery_app.task(
     bind=True,
@@ -68,9 +58,11 @@ class EmbeddingTask(Task):
     queue="embeddings",
 )
 def embed_complaint(self: EmbeddingTask, complaint_id: int) -> dict:  # type: ignore[misc]
-    """Embed a single complaint via the shared Embedder and persist to DB."""
-    import asyncio
+    """Embed a single complaint via the shared Embedder and persist to DB.
 
+    Uses the Embedder's built-in SHA-256 cache as the single source of truth
+    for embedding deduplication — no separate Redis embedding cache layer.
+    """
     logger.info("embedding_task_started", complaint_id=complaint_id)
 
     async def _run() -> dict:
@@ -88,27 +80,14 @@ def embed_complaint(self: EmbeddingTask, complaint_id: int) -> dict:  # type: ig
                 )
                 return {"status": "skipped", "reason": "not_found"}
 
-            text_hash = compute_text_hash(complaint.clean_text)
-            cache_key = f"emb:{text_hash}"
-
-            cached = self.redis.get(cache_key)
-            if cached:
-                embedding = json.loads(cached)
-                logger.debug("embedding_cache_hit", complaint_id=complaint_id)
-            else:
-                # Single source of truth: hvac-ml Embedder.
-                embedding = self.embedder.encode_single(
-                    complaint.clean_text
-                ).tolist()
-                self.redis.setex(
-                    cache_key,
-                    settings.EMBEDDING_CACHE_TTL_SECONDS,
-                    json.dumps(embedding),
-                )
-                logger.debug("embedding_computed", complaint_id=complaint_id)
+            # Single source of truth: hvac-ml Embedder (has built-in cache).
+            embedding = self.embedder.encode_single(
+                complaint.clean_text
+            ).tolist()
+            logger.debug("embedding_computed", complaint_id=complaint_id)
 
             complaint.embedding = embedding
-            complaint.model_version = self.embedder.model_version[:32]
+            complaint.model_version = self.embedder.model_version
             complaint.embedded_at = datetime.now(tz=UTC)
             complaint.status = "embedded"
             await session.commit()
@@ -116,9 +95,7 @@ def embed_complaint(self: EmbeddingTask, complaint_id: int) -> dict:  # type: ig
         return {"status": "ok", "complaint_id": complaint_id}
 
     try:
-        loop = asyncio.new_event_loop()
-        result = loop.run_until_complete(_run())
-        loop.close()
+        result = asyncio.run(_run())
         logger.info("embedding_task_completed", complaint_id=complaint_id)
         return result
     except Exception as exc:

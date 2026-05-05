@@ -80,10 +80,21 @@ from app.workers.celery_app import celery_app; \
 result = celery_app.send_task('app.workers.cluster_job.run_nightly_batch'); \
 print('Task queued:', result.id)"
 
+label-job:
+	@echo "$(CYAN)Triggering Gemini cluster labeling job...$(RESET)"
+	python -c "\
+from app.workers.celery_app import celery_app; \
+result = celery_app.send_task('app.workers.label_job.label_clusters', args=['manual']); \
+print('Task queued:', result.id)"
+
+demo-check:
+	@echo "$(CYAN)Verifying demo readiness...$(RESET)"
+	python scripts/verify_demo_data.py
+
 # ── Tests ─────────────────────────────────────────────────────────────────────
 test:
-	@echo "$(CYAN)Running all tests...$(RESET)"
-	pytest tests/ -v
+	@echo "$(CYAN)Running fast tests (excluding slow + performance)...$(RESET)"
+	pytest tests/ -m "not slow and not performance" -v
 
 test-unit:
 	@echo "$(CYAN)Running unit tests...$(RESET)"
@@ -92,6 +103,31 @@ test-unit:
 test-integ:
 	@echo "$(CYAN)Running integration tests...$(RESET)"
 	pytest tests/integration/ -v
+
+test-integration: test-integ
+
+test-compliance:
+	@echo "$(CYAN)Running PII compliance suite...$(RESET)"
+	pytest tests/compliance/ -v -m compliance --no-cov
+
+test-performance:
+	@echo "$(CYAN)Running performance / SLO tests...$(RESET)"
+	pytest tests/ -v -m performance --no-cov
+
+test-slow:
+	@echo "$(CYAN)Running slow ML quality gates...$(RESET)"
+	pytest tests/ -v -m slow --no-cov
+
+test-all:
+	@echo "$(CYAN)Running full test suite...$(RESET)"
+	pytest tests/ -v
+
+test-coverage:
+	@echo "$(CYAN)Generating HTML coverage report...$(RESET)"
+	pytest tests/ --cov=app --cov-report=html --cov-report=term-missing
+	@echo "Open htmlcov/index.html"
+
+compliance: test-compliance
 
 # ── Code quality ──────────────────────────────────────────────────────────────
 lint:

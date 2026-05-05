@@ -24,14 +24,14 @@ AUDIT_TARGETS = [
     {
         "file": Path("app/services/advisory_service.py"),
         "guard": "strip_pii",
-        "sensitive_calls": {"client.messages.create"},
-        "description": "advisory_service: PII strip before Claude API call",
+        "sensitive_calls": {"model.generate_content"},
+        "description": "advisory_service: PII strip before Gemini API call",
     },
     {
         "file": Path("app/workers/label_job.py"),
         "guard": "strip_pii",
-        "sensitive_calls": {"client.messages.create"},
-        "description": "label_job: PII strip before Claude API call",
+        "sensitive_calls": {"model.generate_content"},
+        "description": "label_job: PII strip before Gemini API call",
     },
 ]
 

@@ -120,9 +120,7 @@ def label_clusters(self: LabelTask, run_id: str) -> dict:  # type: ignore[misc]
         return {"run_id": run_id, "llm_calls_made": llm_calls}
 
     try:
-        loop = asyncio.new_event_loop()
-        result = loop.run_until_complete(_run())
-        loop.close()
+        result = asyncio.run(_run())
         logger.info("label_job_completed", run_id=run_id, **result)
         return result
     except Exception as exc:

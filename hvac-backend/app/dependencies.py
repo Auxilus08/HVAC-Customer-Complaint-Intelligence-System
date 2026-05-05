@@ -54,10 +54,10 @@ RedisDep = Annotated[aioredis.Redis, Depends(get_redis)]
 
 
 def get_celery_app(settings: SettingsDep) -> Celery:
-    """Return the Celery app — imported lazily to avoid circular imports."""
-    from app.workers.celery_app import create_celery_app
+    """Return the Celery app — uses module-level singleton to avoid re-creation."""
+    from app.workers.celery_app import celery_app
 
-    return create_celery_app(settings)
+    return celery_app
 
 
 CeleryDep = Annotated[Celery, Depends(get_celery_app)]

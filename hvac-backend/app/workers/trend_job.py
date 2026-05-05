@@ -147,9 +147,7 @@ def compute_trends(self: TrendTask, run_id: str) -> dict:  # type: ignore[misc]
         return {"run_id": run_id, "emerging_clusters": emerging_count}
 
     try:
-        loop = asyncio.new_event_loop()
-        result = loop.run_until_complete(_run())
-        loop.close()
+        result = asyncio.run(_run())
         return result
     except Exception as exc:
         logger.error("trend_job_failed", run_id=run_id, error=str(exc))

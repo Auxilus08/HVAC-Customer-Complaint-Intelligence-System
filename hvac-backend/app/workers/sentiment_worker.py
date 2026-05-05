@@ -84,9 +84,7 @@ def score_sentiment(self: SentimentTask, complaint_id: int) -> dict:  # type: ig
         }
 
     try:
-        loop = asyncio.new_event_loop()
-        result = loop.run_until_complete(_run())
-        loop.close()
+        result = asyncio.run(_run())
         logger.info("sentiment_task_completed", complaint_id=complaint_id)
         return result
     except Exception as exc:

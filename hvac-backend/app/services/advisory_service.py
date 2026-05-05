@@ -1,13 +1,13 @@
-"""Claude API call for technician advisory generation.
+"""Gemini API call for technician advisory generation.
 
-PII stripping is applied here — BEFORE any Claude API call (second enforcement point).
+PII stripping is applied here — BEFORE any Gemini API call (second enforcement point).
 """
 
 from __future__ import annotations
 
 from datetime import UTC, datetime
 
-import anthropic
+import google.generativeai as genai
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -22,28 +22,41 @@ from app.schemas.cluster import AdvisoryResponse
 logger = get_logger(__name__)
 
 _ADVISORY_SYSTEM_PROMPT = """You are an expert HVAC service advisor. Given a cluster label and
-representative complaint samples, generate a concise technician advisory in 3-4 bullet points:
-- Root cause hypothesis (most probable based on patterns)
-- Recommended diagnostic steps for field technician
-- Parts likely needed (SKU-level if determinable)
-- Escalation criteria (when to escalate to engineering)
-Write in clear, actionable language. No jargon. Max 200 words."""
+representative complaint samples, generate a concise technician advisory in 3-4 sections.
+Format the response as Markdown with these section headings (use ## for each):
+
+## Root Cause
+The most probable root cause hypothesis based on the complaint patterns.
+
+## Diagnostic Steps
+Recommended diagnostic steps for the field technician (numbered list).
+
+## Parts Likely Needed
+Parts likely needed, SKU-level if determinable.
+
+## Escalation Criteria
+When the technician should escalate to engineering.
+
+Write in clear, actionable language. No jargon. Max 250 words total."""
 
 
 async def generate_advisory(cluster_id: int, session: AsyncSession) -> AdvisoryResponse:
-    """Generate a Claude-powered technician advisory for a cluster.
+    """Generate a Gemini-powered technician advisory for a cluster.
 
-    PII stripping is applied to all complaint samples BEFORE sending to Claude.
+    PII stripping is applied to all complaint samples BEFORE sending to Gemini.
     """
     settings = get_settings()
 
-    # Fetch cluster
+    if not settings.GOOGLE_API_KEY:
+        raise AdvisoryServiceError(
+            "GOOGLE_API_KEY is not configured. Set it in .env to enable advisory generation."
+        )
+
     result = await session.execute(select(Cluster).where(Cluster.id == cluster_id))
     cluster = result.scalar_one_or_none()
     if cluster is None:
         raise ClusterNotFoundError(f"Cluster {cluster_id} not found")
 
-    # Fetch up to 10 representative complaint texts
     samples_result = await session.execute(
         select(Complaint.clean_text)
         .where(Complaint.cluster_id == cluster_id)
@@ -55,7 +68,7 @@ async def generate_advisory(cluster_id: int, session: AsyncSession) -> AdvisoryR
     if not sample_texts:
         raise AdvisoryServiceError(f"No complaints found for cluster {cluster_id}")
 
-    # ── PII strip BEFORE Claude API call (rule enforced here) ─────────────────
+    # ── PII strip BEFORE Gemini API call (rule enforced here) ─────────────────
     clean_samples = [strip_pii(t) for t in sample_texts]
 
     user_message = (
@@ -65,21 +78,30 @@ async def generate_advisory(cluster_id: int, session: AsyncSession) -> AdvisoryR
     )
 
     try:
-        client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-        response = client.messages.create(
-            model=settings.CLAUDE_MODEL,
-            max_tokens=400,
-            system=_ADVISORY_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": user_message}],
+        genai.configure(api_key=settings.GOOGLE_API_KEY)
+        model = genai.GenerativeModel(
+            model_name=settings.GEMINI_MODEL,
+            system_instruction=_ADVISORY_SYSTEM_PROMPT,
         )
-        if not response.content:
+        response = model.generate_content(
+            user_message,
+            generation_config=genai.GenerationConfig(
+                max_output_tokens=600,
+                temperature=0.3,
+            ),
+        )
+        advisory_text = (response.text or "").strip()
+        if not advisory_text:
             raise AdvisoryServiceError(
-                f"Claude returned empty content for cluster {cluster_id}"
+                f"Gemini returned empty content for cluster {cluster_id}"
             )
-        advisory_text = response.content[0].text  # type: ignore[index]
-    except anthropic.APIError as exc:
-        logger.error("advisory_claude_api_error", cluster_id=cluster_id, error=str(exc))
-        raise AdvisoryServiceError(f"Claude API error: {exc}") from exc
+    except AdvisoryServiceError:
+        raise
+    except Exception as exc:
+        logger.error(
+            "advisory_gemini_api_error", cluster_id=cluster_id, error=str(exc)
+        )
+        raise AdvisoryServiceError(f"Gemini API error: {exc}") from exc
 
     logger.info(
         "advisory_generated",

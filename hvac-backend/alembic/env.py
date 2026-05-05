@@ -10,6 +10,13 @@ from __future__ import annotations
 
 import os
 from logging.config import fileConfig
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+# Load .env from the backend root (one level above alembic/).
+_env_path = Path(__file__).resolve().parents[1] / ".env"
+load_dotenv(_env_path)
 
 from sqlalchemy import engine_from_config, pool
 

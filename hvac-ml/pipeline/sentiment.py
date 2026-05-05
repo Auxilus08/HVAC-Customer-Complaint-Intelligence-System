@@ -75,9 +75,27 @@ _SAFETY_FLOOR_PATTERNS: list[re.Pattern[str]] = [
 ]
 
 
+# Single-word safety tokens that should also trigger the floor, even without
+# a multi-word regex match (e.g. "leak" alone, not just "gas leak").
+_SAFETY_FLOOR_WORDS: frozenset[str] = frozenset(
+    k for k, v in SAFETY_OVERRIDE_LEXICON.items() if v <= -2.5
+)
+
+
 def _is_safety_critical(text: str) -> bool:
-    """True when the text mentions any safety-critical scenario."""
-    return any(p.search(text) for p in _SAFETY_FLOOR_PATTERNS)
+    """True when the text mentions any safety-critical scenario.
+
+    Checks both multi-word regex patterns AND standalone safety keywords
+    from the lexicon (score ≤ -2.5) so the floor stays aligned with the
+    lexicon entries.
+    """
+    if any(p.search(text) for p in _SAFETY_FLOOR_PATTERNS):
+        return True
+    text_lower = text.lower()
+    return any(
+        f" {w} " in f" {text_lower} "
+        for w in _SAFETY_FLOOR_WORDS
+    )
 
 
 @dataclass

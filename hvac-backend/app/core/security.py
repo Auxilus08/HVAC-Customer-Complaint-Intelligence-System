@@ -2,7 +2,7 @@
 
 Called in EXACTLY two places:
   1. Before any DB write    (complaint_service.py)
-  2. Before any Claude API call (advisory_service.py, label_job.py)
+  2. Before any Gemini API call (advisory_service.py, label_job.py)
 """
 
 from __future__ import annotations
@@ -28,7 +28,10 @@ _PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("aadhaar", re.compile(r"\b\d{4}[\s\-]?\d{4}[\s\-]?\d{4}\b")),
     ("pan", re.compile(r"\b[A-Z]{5}[0-9]{4}[A-Z]\b")),
     ("credit_card", re.compile(r"\b(?:\d{4}[\s\-]?){3}\d{4}\b")),
-    ("pincode", re.compile(r"\b[1-9][0-9]{5}\b")),
+    ("pincode", re.compile(
+        r"(?:pin\s*(?:code)?|zip)\s*[:.\-\s]?\s*\b[1-9][0-9]{5}\b",
+        re.IGNORECASE,
+    )),
     ("ip_addr", re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")),
 ]
 

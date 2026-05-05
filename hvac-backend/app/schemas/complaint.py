@@ -43,6 +43,7 @@ class ComplaintResponse(BaseModel):
     """Public representation of a stored complaint."""
 
     id: int
+    clean_text: str
     source: str | None
     region: str | None
     product_sku: str | None

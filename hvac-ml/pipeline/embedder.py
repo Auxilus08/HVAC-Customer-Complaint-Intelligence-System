@@ -121,14 +121,29 @@ class Embedder:
         return result
 
     # ── Cache persistence ──────────────────────────────────────────────────
+    @staticmethod
+    def _cache_hmac_key(model_name: str) -> bytes:
+        """Derive an HMAC key from model name for cache integrity checks."""
+        return hashlib.sha256(
+            f"embedder-cache-{model_name}".encode()
+        ).digest()
+
     def save_cache(self, path: str) -> None:
-        """Persist the in-memory cache to *path* via pickle."""
+        """Persist the in-memory cache to *path* via pickle with HMAC integrity."""
+        import hmac as _hmac
+
         out = Path(path)
         out.parent.mkdir(parents=True, exist_ok=True)
+        data = pickle.dumps(
+            {"model_name": self.model_name, "cache": self._cache}
+        )
+        mac = _hmac.new(
+            self._cache_hmac_key(self.model_name), data, hashlib.sha256
+        ).hexdigest()
         with out.open("wb") as f:
-            pickle.dump(
-                {"model_name": self.model_name, "cache": self._cache}, f
-            )
+            # Write HMAC line first, then pickled data.
+            f.write(f"{mac}\n".encode())
+            f.write(data)
         logger.info(
             "embedder_cache_saved", path=str(out), entries=len(self._cache)
         )
@@ -136,15 +151,37 @@ class Embedder:
     def load_cache(self, path: str) -> None:
         """Load a previously persisted cache from *path*.
 
-        If the cache was built by a different model the load is skipped so
-        embedding dimensions and semantics stay consistent.
+        Verifies HMAC integrity before unpickling to guard against tampered
+        cache files. If the cache was built by a different model the load is
+        skipped so embedding dimensions and semantics stay consistent.
         """
+        import hmac as _hmac
+
         in_path = Path(path)
         if not in_path.exists():
             logger.warning("embedder_cache_missing", path=str(in_path))
             return
         with in_path.open("rb") as f:
-            payload = pickle.load(f)  # noqa: S301 - trusted local file
+            raw = f.read()
+
+        # Split HMAC header from pickled payload.
+        newline_pos = raw.find(b"\n")
+        if newline_pos == -1:
+            # Legacy cache without HMAC — reject.
+            logger.warning("embedder_cache_no_hmac", path=str(in_path))
+            return
+        stored_mac = raw[:newline_pos].decode()
+        data = raw[newline_pos + 1 :]
+
+        # Verify HMAC before deserializing.
+        expected_mac = _hmac.new(
+            self._cache_hmac_key(self.model_name), data, hashlib.sha256
+        ).hexdigest()
+        if not _hmac.compare_digest(stored_mac, expected_mac):
+            logger.warning("embedder_cache_hmac_mismatch", path=str(in_path))
+            return
+
+        payload = pickle.loads(data)  # noqa: S301 — HMAC-verified
         if payload.get("model_name") != self.model_name:
             logger.warning(
                 "embedder_cache_model_mismatch",

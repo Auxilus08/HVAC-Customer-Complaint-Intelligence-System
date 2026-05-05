@@ -48,16 +48,16 @@ async def get_cluster(
     return detail
 
 
-@router.post(
+@router.get(
     "/{cluster_id}/advisory",
     response_model=AdvisoryResponse,
-    summary="Generate Claude-powered technician advisory for a cluster",
+    summary="Generate Gemini-powered technician advisory for a cluster",
 )
 async def get_advisory(
     cluster_id: int,
     session: DBSessionDep,
 ) -> AdvisoryResponse:
-    """Call Claude API to produce a diagnostic advisory for field technicians.
+    """Call Gemini API to produce a diagnostic advisory for field technicians.
 
     PII stripping is applied to all complaint samples before the API call.
     """

@@ -86,6 +86,11 @@ class Clusterer:
             if ids is not None
             else np.arange(len(embeddings), dtype=np.int64)
         )
+        if len(id_array) != len(embeddings):
+            raise ValueError(
+                f"ids length ({len(id_array)}) must match "
+                f"embeddings length ({len(embeddings)})"
+            )
 
         # 1. UMAP 384D → 50D for clustering ─────────────────────────────────
         reducer_50d = umap.UMAP(

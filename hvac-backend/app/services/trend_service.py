@@ -19,7 +19,19 @@ async def compute_wow_growth(cluster_id: int, session: AsyncSession) -> float | 
 
     Returns growth as a decimal fraction (0.5 = 50% growth).
     Returns None if insufficient history.
+
+    .. deprecated::
+        Use ``pipeline.trend_detector.TrendDetector.compute_trends()`` instead.
+        This function has different semantics (returns None for zero baseline,
+        excludes today's complaints) and will be removed in a future release.
     """
+    import warnings
+
+    warnings.warn(
+        "compute_wow_growth() is deprecated — use TrendDetector.compute_trends() instead",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     today = date.today()
     current_week_start = today - timedelta(days=7)
     prev_week_start = today - timedelta(days=14)

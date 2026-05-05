@@ -55,17 +55,23 @@ async def ingest_complaints(
         )
         accepted += 1
 
-        # Enqueue embedding + sentiment tasks
-        celery_app.send_task(
-            "app.workers.embedding_worker.embed_complaint",
-            args=[complaint.id],
-            queue="embeddings",
+        # Chain: embed first, THEN score sentiment to avoid concurrent writes
+        # to the same Complaint row (lost-update race condition).
+        from celery import chain
+
+        pipeline = chain(
+            celery_app.signature(
+                "app.workers.embedding_worker.embed_complaint",
+                args=[complaint.id],
+                queue="embeddings",
+            ),
+            celery_app.signature(
+                "app.workers.sentiment_worker.score_sentiment",
+                args=[complaint.id],
+                queue="sentiment",
+            ),
         )
-        celery_app.send_task(
-            "app.workers.sentiment_worker.score_sentiment",
-            args=[complaint.id],
-            queue="sentiment",
-        )
+        pipeline.apply_async()
         queued += 1
 
     await session.commit()

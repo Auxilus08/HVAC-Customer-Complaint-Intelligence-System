@@ -62,20 +62,33 @@ async def get_alerts(
     Alerts are generated dynamically from is_emerging clusters and
     CRITICAL-sentiment clusters — no separate alert table needed for MVP.
     """
-    result = await session.execute(
-        select(Cluster)
-        .where(
-            (Cluster.is_emerging == True)  # noqa: E712
-            | (Cluster.avg_sentiment < settings.CRITICAL_SENTIMENT_THRESHOLD)
-        )
-        .order_by(Cluster.avg_sentiment.asc().nullslast())
-        .limit(limit)
+    q = select(Cluster).where(
+        (Cluster.is_emerging == True)  # noqa: E712
+        | (Cluster.avg_sentiment < settings.CRITICAL_SENTIMENT_THRESHOLD)
     )
-    clusters = result.scalars().all()
 
-    alerts = [_cluster_to_alert(c) for c in clusters]
-
+    # Apply severity as a SQL filter BEFORE LIMIT to get correct result counts.
     if severity:
-        alerts = [a for a in alerts if a.severity == severity.upper()]
+        sev = severity.upper()
+        if sev == "CRITICAL":
+            q = q.where(
+                Cluster.avg_sentiment < settings.CRITICAL_SENTIMENT_THRESHOLD
+            )
+        elif sev == "HIGH":
+            q = q.where(
+                Cluster.avg_sentiment >= settings.CRITICAL_SENTIMENT_THRESHOLD,
+                Cluster.avg_sentiment < -0.3,
+            )
+        elif sev == "MEDIUM":
+            q = q.where(
+                (Cluster.avg_sentiment >= -0.3)
+                | (Cluster.avg_sentiment.is_(None))
+            )
+
+    q = q.order_by(Cluster.avg_sentiment.asc().nullslast()).limit(limit)
+
+    result = await session.execute(q)
+    clusters = result.scalars().all()
+    alerts = [_cluster_to_alert(c) for c in clusters]
 
     return AlertListResponse(total=len(alerts), alerts=alerts)

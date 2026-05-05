@@ -1,0 +1,87 @@
+export const CLUSTER_COLORS = [
+  "#6366f1",
+  "#e85d04",
+  "#10b981",
+  "#f59e0b",
+  "#3b82f6",
+  "#ec4899",
+  "#14b8a6",
+  "#a855f7",
+  "#84cc16",
+  "#f97316",
+];
+
+export const clusterColor = (id) => {
+  if (id === null || id === undefined || id === -1) return "#334155";
+  return CLUSTER_COLORS[((id % CLUSTER_COLORS.length) + CLUSTER_COLORS.length) % CLUSTER_COLORS.length];
+};
+
+export const sentimentBadge = (avg) => {
+  if (avg === null || avg === undefined) return "badge-normal";
+  if (avg < -0.8) return "badge-critical";
+  if (avg < -0.5) return "badge-high";
+  if (avg >= 0.2) return "badge-positive";
+  return "badge-normal";
+};
+
+export const sentimentLabel = (avg) => {
+  if (avg === null || avg === undefined) return "—";
+  if (avg < -0.8) return "CRITICAL";
+  if (avg < -0.5) return "HIGH";
+  if (avg >= 0.2) return "POSITIVE";
+  return "NORMAL";
+};
+
+export const formatRelativeTime = (date) => {
+  if (!date) return "never";
+  const d = date instanceof Date ? date : new Date(date);
+  const seconds = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (seconds < 10) return "just now";
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+};
+
+export const formatCurrencyINR = (value) => {
+  if (value === null || value === undefined || Number.isNaN(value)) return "—";
+  const n = Number(value);
+  if (n >= 1e7) return `Rs.${(n / 1e7).toFixed(1)}Cr`;
+  if (n >= 1e5) return `Rs.${(n / 1e5).toFixed(1)}L`;
+  if (n >= 1e3) return `Rs.${(n / 1e3).toFixed(1)}K`;
+  return `Rs.${n.toFixed(0)}`;
+};
+
+export const formatPercent = (value, withSign = true) => {
+  if (value === null || value === undefined || Number.isNaN(value)) return "—";
+  const n = Number(value);
+  const sign = withSign && n > 0 ? "+" : "";
+  return `${sign}${n.toFixed(0)}%`;
+};
+
+export const truncate = (text, n = 100) => {
+  if (!text) return "";
+  return text.length > n ? `${text.slice(0, n - 1)}…` : text;
+};
+
+export const growthColorClass = (pct) => {
+  if (pct === null || pct === undefined || Number.isNaN(pct)) return "text-slate-200";
+  if (pct < 0) return "text-positive";
+  if (pct > 100) return "text-critical";
+  if (pct > 30) return "text-high";
+  return "text-slate-200";
+};
+
+export const asArray = (v) => {
+  if (Array.isArray(v)) return v;
+  if (v && Array.isArray(v.items)) return v.items;
+  if (v && Array.isArray(v.results)) return v.results;
+  if (v && Array.isArray(v.data)) return v.data;
+  if (v && Array.isArray(v.points)) return v.points;
+  if (v && Array.isArray(v.alerts)) return v.alerts;
+  if (v && Array.isArray(v.clusters)) return v.clusters;
+  return [];
+};
