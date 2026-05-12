@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const STEPS = [
   { delay: 0, anchor: "stats-pills", tooltip: "System processed 500 complaints automatically" },
@@ -77,7 +78,8 @@ const findHighestEmergingCluster = () => {
   return best;
 };
 
-export default function DemoMode({ onExit, setSelectedClusterId, setActiveTab }) {
+export default function DemoMode({ onExit, setSelectedClusterId }) {
+  const navigate = useNavigate();
   const [stepIndex, setStepIndex] = useState(0);
   const [highlightRect, setHighlightRect] = useState(null);
   const timersRef = useRef([]);
@@ -108,10 +110,10 @@ export default function DemoMode({ onExit, setSelectedClusterId, setActiveTab })
           btn?.click();
         } else if (step.action === "go-analytics") {
           setSelectedClusterId?.(null);
-          setActiveTab?.("analytics");
+          navigate("/overview");
         } else if (step.action === "go-map") {
           setSelectedClusterId?.(null);
-          setActiveTab?.("map");
+          navigate("/map");
         }
       }, step.delay);
       timersRef.current.push(t);
@@ -121,7 +123,7 @@ export default function DemoMode({ onExit, setSelectedClusterId, setActiveTab })
     timersRef.current.push(exitTimer);
 
     return () => clearTimers();
-  }, [onExit, setSelectedClusterId, setActiveTab]);
+  }, [onExit, setSelectedClusterId, navigate]);
 
   useEffect(() => {
     const step = STEPS[stepIndex];
@@ -192,7 +194,7 @@ export default function DemoMode({ onExit, setSelectedClusterId, setActiveTab })
       )}
 
       <div className="absolute top-4 right-4 pointer-events-auto flex items-center gap-2 bg-surface-card border border-surface-border rounded-lg px-3 py-1.5 shadow-2xl">
-        <span className="text-xs text-slate-400">
+        <span className="text-xs text-ink-500">
           Step {stepIndex + 1} / {STEPS.length}
         </span>
         <button
@@ -200,7 +202,7 @@ export default function DemoMode({ onExit, setSelectedClusterId, setActiveTab })
             clearTimers();
             onExit?.();
           }}
-          className="text-xs text-accent font-medium hover:text-white transition-colors"
+          className="text-xs text-accent font-medium hover:text-ink-900 transition-colors"
         >
           Exit Demo
         </button>

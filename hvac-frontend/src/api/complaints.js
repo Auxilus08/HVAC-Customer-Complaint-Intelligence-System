@@ -10,3 +10,6 @@ export const uploadCSV = (file) => {
 
 export const uploadJSON = (complaints) =>
   client.post("/complaints/upload", { complaints });
+
+export const getComplaintLocations = (limit = 5000) =>
+  client.get("/complaints/locations", { params: { limit } });

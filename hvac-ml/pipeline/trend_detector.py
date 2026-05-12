@@ -81,6 +81,8 @@ class TrendDetector:
             as_of_ts = df["created_at"].max()
         else:
             as_of_ts = pd.Timestamp(as_of)
+            if as_of_ts.tz is not None:
+                as_of_ts = as_of_ts.tz_localize(None)
 
         cutoff = as_of_ts - pd.Timedelta(days=lookback_days)
         df = df[df["created_at"] >= cutoff]

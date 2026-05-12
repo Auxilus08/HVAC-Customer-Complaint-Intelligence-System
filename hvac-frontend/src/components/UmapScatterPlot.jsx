@@ -102,16 +102,16 @@ export default function UmapScatterPlot({ onClusterClick }) {
 
   const layout = useMemo(
     () => ({
-      paper_bgcolor: "#0f172a",
-      plot_bgcolor: "#1e293b",
-      font: { color: "#94a3b8", family: "Inter" },
+      paper_bgcolor: "#FFFFFF",
+      plot_bgcolor: "#F8FAFC",
+      font: { color: "#334155", family: "Inter" },
       margin: { t: 40, r: 20, b: 40, l: 20 },
       showlegend: true,
       legend: {
-        bgcolor: "#1e293b",
-        bordercolor: "#334155",
+        bgcolor: "#FFFFFF",
+        bordercolor: "#E2E8F0",
         borderwidth: 1,
-        font: { color: "#94a3b8", size: 11 },
+        font: { color: "#334155", size: 11 },
         x: 1.02,
         y: 1,
       },
@@ -129,13 +129,13 @@ export default function UmapScatterPlot({ onClusterClick }) {
       },
       title: {
         text: "Complaint Cluster Map",
-        font: { color: "#f1f5f9", size: 16 },
+        font: { color: "#0F172A", size: 16 },
         x: 0.02,
       },
       hoverlabel: {
-        bgcolor: "#1e293b",
-        bordercolor: "#334155",
-        font: { color: "#f1f5f9", size: 12 },
+        bgcolor: "#FFFFFF",
+        bordercolor: "#E2E8F0",
+        font: { color: "#0F172A", size: 12 },
       },
       autosize: true,
     }),
@@ -157,7 +157,7 @@ export default function UmapScatterPlot({ onClusterClick }) {
     return (
       <div className="card flex flex-col items-center justify-center min-h-[60vh]">
         <Spinner size="lg" />
-        <p className="text-slate-400 mt-4 text-sm">Loading cluster map…</p>
+        <p className="text-ink-500 mt-4 text-sm">Loading cluster map…</p>
       </div>
     );
   }

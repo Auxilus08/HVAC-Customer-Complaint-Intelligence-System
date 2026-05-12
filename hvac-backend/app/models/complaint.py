@@ -6,7 +6,17 @@ import uuid
 from datetime import datetime
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import BigInteger, Float, Index, LargeBinary, String, Text, Uuid
+from sqlalchemy import (
+    BigInteger,
+    DateTime,
+    Float,
+    Index,
+    LargeBinary,
+    String,
+    Text,
+    Uuid,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -23,6 +33,8 @@ class Complaint(Base):
     product_sku: Mapped[str | None] = mapped_column(String(50), nullable=True)
     customer_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)
     technician_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, nullable=True)
+    external_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    language: Mapped[str | None] = mapped_column(String(8), nullable=True)
     embedding: Mapped[list[float] | None] = mapped_column(Vector(384), nullable=True)
     model_version: Mapped[str | None] = mapped_column(String(64), nullable=True)
     cluster_id: Mapped[int | None] = mapped_column(nullable=True)
@@ -30,9 +42,15 @@ class Complaint(Base):
     sentiment_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     sentiment_label: Mapped[str | None] = mapped_column(String(20), nullable=True)
     status: Mapped[str] = mapped_column(String(30), default="pending", nullable=False)
-    created_at: Mapped[datetime] = mapped_column(nullable=False, server_default="NOW()")
-    embedded_at: Mapped[datetime | None] = mapped_column(nullable=True)
-    processed_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("NOW()")
+    )
+    embedded_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    processed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     __table_args__ = (
         Index(

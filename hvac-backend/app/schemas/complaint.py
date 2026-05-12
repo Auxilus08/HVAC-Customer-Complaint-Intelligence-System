@@ -8,7 +8,18 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
-SOURCE_CHOICES = Literal["crm", "whatsapp", "email", "app", "field_tech", "call_center"]
+SOURCE_CHOICES = Literal[
+    "crm",
+    "whatsapp",
+    "email",
+    "app",
+    "field_tech",
+    "call_center",
+    "nyc_311",
+    "cpsc",
+    "app_store",
+    "synthetic",
+]
 SENTIMENT_LABEL_CHOICES = Literal["CRITICAL", "HIGH", "NORMAL", "POSITIVE"]
 STATUS_CHOICES = Literal["pending", "embedded", "processed"]
 
@@ -24,6 +35,8 @@ class ComplaintIngest(BaseModel):
     product_sku: str | None = Field(default=None, max_length=50)
     customer_id: uuid.UUID | None = None
     technician_id: uuid.UUID | None = None
+    external_id: str | None = Field(default=None, max_length=128)
+    language: str | None = Field(default=None, max_length=8)
 
     @field_validator("text")
     @classmethod

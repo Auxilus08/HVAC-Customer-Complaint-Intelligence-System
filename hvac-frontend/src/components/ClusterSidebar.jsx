@@ -52,10 +52,10 @@ export default function ClusterSidebar({ selectedId, onSelect }) {
       <div className="sticky top-0 z-10 bg-surface-card/95 backdrop-blur border-b border-surface-border">
         <div className="px-4 pt-4 pb-3">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-white tracking-wide uppercase">
+            <h2 className="text-sm font-semibold text-ink-900 tracking-wide uppercase">
               Clusters
             </h2>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-surface-border text-slate-300 font-mono">
+            <span className="text-xs px-2 py-0.5 rounded-full bg-surface-border text-ink-700 font-mono">
               {sorted.length} found
             </span>
           </div>
@@ -63,7 +63,7 @@ export default function ClusterSidebar({ selectedId, onSelect }) {
             <select
               value={region}
               onChange={(e) => setRegion(e.target.value)}
-              className="flex-1 bg-surface text-slate-200 text-xs border border-surface-border rounded-md px-2 py-1.5 focus:outline-none focus:border-accent"
+              className="flex-1 bg-surface text-ink-900 text-xs border border-surface-border rounded-md px-2 py-1.5 focus:outline-none focus:border-accent"
             >
               <option value="">All regions</option>
               {regions.map((r) => (
@@ -77,7 +77,7 @@ export default function ClusterSidebar({ selectedId, onSelect }) {
               className={`text-xs px-2.5 py-1.5 rounded-md font-medium transition-colors border ${
                 emergingOnly
                   ? "bg-accent text-white border-accent"
-                  : "bg-surface text-slate-300 border-surface-border hover:border-accent/50"
+                  : "bg-surface text-ink-700 border-surface-border hover:border-accent/50"
               }`}
               title="Show only emerging clusters"
             >
@@ -104,7 +104,7 @@ export default function ClusterSidebar({ selectedId, onSelect }) {
         )}
 
         {!isLoading && !isError && sorted.length === 0 && (
-          <div className="text-center text-slate-500 text-sm py-8">
+          <div className="text-center text-ink-500 text-sm py-8">
             No clusters yet.
           </div>
         )}
@@ -152,17 +152,17 @@ export default function ClusterSidebar({ selectedId, onSelect }) {
                       className="w-2.5 h-2.5 rounded-full flex-shrink-0"
                       style={{ backgroundColor: color }}
                     />
-                    <span className="text-sm font-medium text-slate-100 truncate">
+                    <span className="text-sm font-medium text-ink-900 truncate">
                       {c.label || `Cluster #${id}`}
                     </span>
                   </div>
                   {isEmerging && <span className="badge-emerging">EMERGING</span>}
                 </div>
-                <div className="flex items-center gap-2 text-[11px] text-slate-400 mb-2 ml-4">
+                <div className="flex items-center gap-2 text-[11px] text-ink-500 mb-2 ml-4">
                   <span>{memberCount} complaints</span>
                   {avg != null && (
                     <>
-                      <span className="text-slate-600">·</span>
+                      <span className="text-ink-300">·</span>
                       <span className="font-mono">avg {Number(avg).toFixed(2)}</span>
                     </>
                   )}
@@ -177,7 +177,7 @@ export default function ClusterSidebar({ selectedId, onSelect }) {
                 </div>
                 <div className="flex items-center justify-between ml-4">
                   {exposure != null ? (
-                    <span className="text-[11px] text-slate-300 font-mono">
+                    <span className="text-[11px] text-ink-700 font-mono">
                       {formatCurrencyINR(exposure)} exposure
                     </span>
                   ) : (
@@ -192,12 +192,12 @@ export default function ClusterSidebar({ selectedId, onSelect }) {
           })}
       </div>
 
-      <div className="border-t border-surface-border px-4 py-2 flex items-center justify-between text-[11px] text-slate-500 flex-shrink-0">
+      <div className="border-t border-surface-border px-4 py-2 flex items-center justify-between text-[11px] text-ink-500 flex-shrink-0">
         <span>Refreshes every 60s</span>
         <button
           onClick={refetch}
           disabled={isFetching}
-          className="text-slate-400 hover:text-accent disabled:opacity-50 transition-colors"
+          className="text-ink-500 hover:text-accent disabled:opacity-50 transition-colors"
           title="Refresh now"
           aria-label="Refresh"
         >

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getStats, getHeatmap, getSkus } from "../api/analytics";
+import { getStats, getHeatmap, getSkus, getSources, getBuildings, getRegionHeatmap, getGeo, getCities } from "../api/analytics";
 
 export const useStats = () =>
   useQuery({
@@ -23,4 +23,42 @@ export const useSkus = () =>
     queryFn: getSkus,
     refetchInterval: 300_000,
     staleTime: 120_000,
+  });
+
+export const useSources = () =>
+  useQuery({
+    queryKey: ["analytics", "sources"],
+    queryFn: getSources,
+    refetchInterval: 300_000,
+    staleTime: 120_000,
+  });
+
+export const useBuildings = () =>
+  useQuery({
+    queryKey: ["analytics", "buildings"],
+    queryFn: getBuildings,
+    refetchInterval: 300_000,
+    staleTime: 120_000,
+  });
+
+export const useRegionHeatmap = () =>
+  useQuery({
+    queryKey: ["region-heatmap"],
+    queryFn: getRegionHeatmap,
+    staleTime: 60_000,
+  });
+
+export const useGeo = (level) =>
+  useQuery({
+    queryKey: ["geo", level],
+    queryFn: () => getGeo(level),
+    staleTime: 5 * 60_000,
+    enabled: level === "world" || level === "usa" || level === "india",
+  });
+
+export const useCities = () =>
+  useQuery({
+    queryKey: ["analytics-cities"],
+    queryFn: getCities,
+    staleTime: 5 * 60_000,
   });

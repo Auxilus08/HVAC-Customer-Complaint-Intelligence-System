@@ -66,9 +66,8 @@ async def test_cluster_service_returns_emerging_first(test_session: AsyncSession
 
 
 @pytest.mark.asyncio
-async def test_advisory_service_strips_pii_before_gemini(test_session: AsyncSession):
-    """Call Site 2 enforcement: PII must be stripped before Gemini receives anything."""
-    from app.config import get_settings
+async def test_advisory_service_strips_pii_before_llm(test_session: AsyncSession):
+    """Call Site 2 enforcement: PII must be stripped before the LLM receives anything."""
     from app.services import advisory_service
 
     cluster = Cluster(label="Compressor", member_count=3, last_run_id="r")
@@ -90,32 +89,33 @@ async def test_advisory_service_strips_pii_before_gemini(test_session: AsyncSess
     ])
     await test_session.commit()
 
-    captured: list[str] = []
+    captured_messages: list[list[dict]] = []
 
-    class _MockResponse:
-        text = (
-            "## Root Cause\nCompressor wear\n"
-            "## Diagnostic Steps\n1. Check oil\n"
-            "## Parts Likely Needed\nCompressor\n"
-            "## Escalation Criteria\nIf unit fails twice"
-        )
+    advisory_text = (
+        "## Root Cause\nCompressor wear\n"
+        "## Diagnostic Steps\n1. Check oil\n"
+        "## Parts Likely Needed\nCompressor\n"
+        "## Escalation Criteria\nIf unit fails twice"
+    )
 
-    class _MockModel:
-        def generate_content(self, msg, generation_config=None):
-            captured.append(msg)
-            return _MockResponse()
+    mock_choice = MagicMock()
+    mock_choice.message.content = advisory_text
+    mock_response = MagicMock()
+    mock_response.choices = [mock_choice]
 
-    settings = get_settings()
-    settings.GOOGLE_API_KEY = "test-key"
+    mock_client = MagicMock()
+    mock_client.chat.completions.create.side_effect = (
+        lambda model, messages, **kw: captured_messages.append(messages) or mock_response
+    )
 
-    with patch.object(advisory_service.genai, "configure", lambda **kw: None), \
-         patch.object(advisory_service.genai, "GenerativeModel",
-                      return_value=_MockModel()):
+    with patch("app.services.advisory_service.get_llm_client", return_value=(mock_client, "test-model")):
         result = await advisory_service.generate_advisory(cluster.id, test_session)
 
     assert result.advisory_text
-    assert captured, "Gemini should have been called"
-    full_prompt = " ".join(captured)
-    assert "9876543210" not in full_prompt, "PII LEAK: phone reached Gemini"
-    assert "raj.kumar@gmail.com" not in full_prompt, "PII LEAK: email reached Gemini"
+    assert captured_messages, "LLM should have been called"
+    full_prompt = " ".join(
+        m["content"] for msgs in captured_messages for m in msgs
+    )
+    assert "9876543210" not in full_prompt, "PII LEAK: phone reached LLM"
+    assert "raj.kumar@gmail.com" not in full_prompt, "PII LEAK: email reached LLM"
     assert "[REDACTED]" in full_prompt, "PII placeholder missing — strip silently failed"

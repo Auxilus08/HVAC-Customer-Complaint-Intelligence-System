@@ -61,11 +61,11 @@ const parseAdvisorySections = (text) => {
   return sections.filter((s) => s.body.trim() || s.title);
 };
 
-function MetricCard({ value, label, valueClass = "text-slate-100" }) {
+function MetricCard({ value, label, valueClass = "text-ink-900" }) {
   return (
     <div className="bg-surface-card rounded-xl p-4 border border-surface-border">
       <div className={`text-2xl font-bold ${valueClass}`}>{value}</div>
-      <div className="text-xs text-slate-400 mt-1">{label}</div>
+      <div className="text-xs text-ink-500 mt-1">{label}</div>
     </div>
   );
 }
@@ -110,7 +110,7 @@ function AdvisorySection({ id, cluster }) {
       data-demo-anchor="advisory"
     >
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-base font-semibold text-white tracking-tight">
+        <h3 className="text-base font-semibold text-ink-900 tracking-tight">
           AI-Generated Service Advisory
         </h3>
         {advisory.isSuccess && (
@@ -134,7 +134,7 @@ function AdvisorySection({ id, cluster }) {
 
       {!enabled && !advisory.isSuccess && (
         <div className="bg-surface/60 border border-surface-border rounded-lg p-5 text-center">
-          <p className="text-slate-300 text-sm mb-3">
+          <p className="text-ink-700 text-sm mb-3">
             Generate a Gemini-powered technician advisory for this complaint
             cluster.
           </p>
@@ -154,7 +154,7 @@ function AdvisorySection({ id, cluster }) {
       {enabled && advisory.isLoading && (
         <div className="flex items-center gap-3 py-6 px-4 bg-surface/60 rounded-lg">
           <Spinner size="md" />
-          <p className="text-slate-300 text-sm">
+          <p className="text-ink-700 text-sm">
             Gemini is analyzing complaint patterns…
           </p>
         </div>
@@ -178,7 +178,7 @@ function AdvisorySection({ id, cluster }) {
               <h4 className="text-accent font-semibold mb-1 text-sm">
                 {s.title}
               </h4>
-              <p className="text-slate-300 text-sm leading-relaxed whitespace-pre-line">
+              <p className="text-ink-700 text-sm leading-relaxed whitespace-pre-line">
                 {s.body.trim()}
               </p>
             </div>
@@ -187,7 +187,7 @@ function AdvisorySection({ id, cluster }) {
       )}
 
       {advisory.isSuccess && sections.length === 0 && text && (
-        <div className="bg-surface/40 rounded-lg p-4 border border-surface-border whitespace-pre-line text-slate-300 text-sm leading-relaxed">
+        <div className="bg-surface/40 rounded-lg p-4 border border-surface-border whitespace-pre-line text-ink-700 text-sm leading-relaxed">
           {text}
         </div>
       )}
@@ -216,7 +216,7 @@ function TrendChart({ id }) {
   }
   if (isError || series.length === 0) {
     return (
-      <div className="card h-44 flex items-center justify-center text-slate-500 text-sm">
+      <div className="card h-44 flex items-center justify-center text-ink-500 text-sm">
         No trend data available
       </div>
     );
@@ -225,10 +225,10 @@ function TrendChart({ id }) {
   return (
     <div className="card">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold text-white tracking-wide">
+        <h3 className="text-sm font-semibold text-ink-900 tracking-wide">
           Daily Volume — Last 30 days
         </h3>
-        <span className="text-xs text-slate-500">{series.length} pts</span>
+        <span className="text-xs text-ink-500">{series.length} pts</span>
       </div>
       <ResponsiveContainer width="100%" height={180}>
         <AreaChart data={series} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
@@ -344,7 +344,7 @@ export default function ClusterDetail({ id, onBack }) {
               className="w-4 h-4 rounded-full flex-shrink-0 ring-4 ring-offset-2 ring-offset-surface"
               style={{ backgroundColor: color, ringColor: color }}
             />
-            <h2 className="text-2xl font-bold text-white tracking-tight truncate">
+            <h2 className="text-2xl font-bold text-ink-900 tracking-tight truncate">
               {cluster.label || `Cluster #${cluster.id ?? id}`}
             </h2>
           </div>
@@ -375,7 +375,7 @@ export default function ClusterDetail({ id, onBack }) {
         <MetricCard
           value={avg != null ? Number(avg).toFixed(2) : "—"}
           label="Avg Sentiment"
-          valueClass={avg != null && avg < -0.5 ? "text-critical" : "text-slate-100"}
+          valueClass={avg != null && avg < -0.5 ? "text-critical" : "text-ink-900"}
         />
         <MetricCard
           value={wow != null ? formatPercent(wow) : "—"}
@@ -390,12 +390,12 @@ export default function ClusterDetail({ id, onBack }) {
 
       <section className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div className="card">
-          <h3 className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-2">
+          <h3 className="text-xs uppercase tracking-wider text-ink-500 font-semibold mb-2">
             Top Products
           </h3>
           <div className="flex flex-wrap gap-2">
             {skus.length === 0 ? (
-              <span className="text-slate-500 text-sm">—</span>
+              <span className="text-ink-500 text-sm">—</span>
             ) : (
               skus.slice(0, 8).map((s, i) => {
                 const label = typeof s === "string" ? s : s.sku ?? s.value;
@@ -404,7 +404,7 @@ export default function ClusterDetail({ id, onBack }) {
                   <span key={`${label}-${i}`} className="chip">
                     {label}
                     {count != null && (
-                      <span className="text-slate-500 ml-1">· {count}</span>
+                      <span className="text-ink-500 ml-1">· {count}</span>
                     )}
                   </span>
                 );
@@ -413,12 +413,12 @@ export default function ClusterDetail({ id, onBack }) {
           </div>
         </div>
         <div className="card">
-          <h3 className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-2">
+          <h3 className="text-xs uppercase tracking-wider text-ink-500 font-semibold mb-2">
             Top Regions
           </h3>
           <div className="flex flex-wrap gap-2">
             {regions.length === 0 ? (
-              <span className="text-slate-500 text-sm">—</span>
+              <span className="text-ink-500 text-sm">—</span>
             ) : (
               regions.slice(0, 8).map((r, i) => {
                 const label = typeof r === "string" ? r : r.region ?? r.value;
@@ -427,7 +427,7 @@ export default function ClusterDetail({ id, onBack }) {
                   <span key={`${label}-${i}`} className="chip">
                     {label}
                     {count != null && (
-                      <span className="text-slate-500 ml-1">· {count}</span>
+                      <span className="text-ink-500 ml-1">· {count}</span>
                     )}
                   </span>
                 );
@@ -440,11 +440,11 @@ export default function ClusterDetail({ id, onBack }) {
       <TrendChart id={cluster.id ?? id} />
 
       <section className="card">
-        <h3 className="text-base font-semibold text-white mb-3 tracking-tight">
+        <h3 className="text-base font-semibold text-ink-900 mb-3 tracking-tight">
           Recent Complaints ({recent.length || 0})
         </h3>
         {recent.length === 0 ? (
-          <div className="text-slate-500 text-sm">No recent complaints.</div>
+          <div className="text-ink-500 text-sm">No recent complaints.</div>
         ) : (
           <ul className="space-y-2">
             {recent.slice(0, 10).map((c, i) => {
@@ -466,8 +466,8 @@ export default function ClusterDetail({ id, onBack }) {
                 >
                   <span className={`${badgeClass} mt-0.5 shrink-0`}>{sLabel}</span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-slate-200 text-sm leading-snug">{text}</p>
-                    <p className="text-xs text-slate-400 mt-1">
+                    <p className="text-ink-900 text-sm leading-snug">{text}</p>
+                    <p className="text-xs text-ink-500 mt-1">
                       {[c.region, c.product_sku, formatRelativeTime(created)]
                         .filter(Boolean)
                         .join(" · ")}

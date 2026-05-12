@@ -6,26 +6,26 @@ This worker NEVER instantiates SentenceTransformer directly.
 
 from __future__ import annotations
 
-import asyncio
 from datetime import UTC, datetime
 
 from celery import Task
-from celery.utils.log import get_task_logger
-from sqlalchemy import select
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.config import get_settings
+from app.core.logging import get_logger
 from app.workers.celery_app import celery_app
 
-logger = get_task_logger(__name__)
+logger = get_logger(__name__)
 settings = get_settings()
 
 
 class EmbeddingTask(Task):
-    """Custom base task that holds a lazy-loaded Embedder and session factory."""
+    """Custom base task with a lazy-loaded Embedder and a per-process sync engine."""
 
     abstract = True
     _embedder = None
-    _session_factory = None
+    _session_factory: sessionmaker[Session] | None = None
 
     @property
     def embedder(self):  # type: ignore[override]
@@ -41,11 +41,16 @@ class EmbeddingTask(Task):
         return self._embedder
 
     @property
-    def session_factory(self):
+    def session_factory(self) -> sessionmaker[Session]:
         if self._session_factory is None:
-            from app.db.session import get_session_factory
-
-            self._session_factory = get_session_factory()
+            engine = create_engine(
+                settings.DATABASE_SYNC_URL,
+                pool_size=2,
+                max_overflow=1,
+                pool_pre_ping=True,
+                echo=False,
+            )
+            self._session_factory = sessionmaker(bind=engine, expire_on_commit=False)
         return self._session_factory
 
 
@@ -63,16 +68,13 @@ def embed_complaint(self: EmbeddingTask, complaint_id: int) -> dict:  # type: ig
     Uses the Embedder's built-in SHA-256 cache as the single source of truth
     for embedding deduplication — no separate Redis embedding cache layer.
     """
-    logger.info("embedding_task_started", complaint_id=complaint_id)
+    from app.models.complaint import Complaint
 
-    async def _run() -> dict:
-        from app.models.complaint import Complaint
-
-        async with self.session_factory() as session:
-            result = await session.execute(
+    try:
+        with self.session_factory() as session:
+            complaint = session.execute(
                 select(Complaint).where(Complaint.id == complaint_id)
-            )
-            complaint = result.scalar_one_or_none()
+            ).scalar_one_or_none()
 
             if complaint is None:
                 logger.warning(
@@ -80,24 +82,15 @@ def embed_complaint(self: EmbeddingTask, complaint_id: int) -> dict:  # type: ig
                 )
                 return {"status": "skipped", "reason": "not_found"}
 
-            # Single source of truth: hvac-ml Embedder (has built-in cache).
-            embedding = self.embedder.encode_single(
-                complaint.clean_text
-            ).tolist()
-            logger.debug("embedding_computed", complaint_id=complaint_id)
-
+            embedding = self.embedder.encode_single(complaint.clean_text).tolist()
             complaint.embedding = embedding
             complaint.model_version = self.embedder.model_version
             complaint.embedded_at = datetime.now(tz=UTC)
             complaint.status = "embedded"
-            await session.commit()
+            session.commit()
 
-        return {"status": "ok", "complaint_id": complaint_id}
-
-    try:
-        result = asyncio.run(_run())
         logger.info("embedding_task_completed", complaint_id=complaint_id)
-        return result
+        return {"status": "ok", "complaint_id": complaint_id}
     except Exception as exc:
         logger.error(
             "embedding_task_failed",

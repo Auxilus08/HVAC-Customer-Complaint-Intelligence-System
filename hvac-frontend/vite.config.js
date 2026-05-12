@@ -7,6 +7,7 @@ export default defineConfig(({ mode }) => ({
   server: {
     port: 5173,
     strictPort: true,
+    historyApiFallback: true,
     proxy: {
       "/api": {
         target: process.env.VITE_API_BASE_URL || "http://localhost:8000",
@@ -33,6 +34,7 @@ export default defineConfig(({ mode }) => ({
           vendor: ["react", "react-dom", "react-router-dom"],
           query: ["@tanstack/react-query"],
           charts: ["recharts", "react-plotly.js"],
+          leaflet: ["leaflet", "react-leaflet"],
           http: ["axios"],
         },
       },

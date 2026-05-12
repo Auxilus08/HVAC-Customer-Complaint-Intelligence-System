@@ -10,11 +10,37 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
+from sqlalchemy.pool import NullPool
 
 from app.config import get_settings
 
 _engine: AsyncEngine | None = None
 _session_factory: async_sessionmaker[AsyncSession] | None = None
+
+
+def get_worker_session_factory() -> async_sessionmaker[AsyncSession]:
+    """Per-call session factory for Celery workers.
+
+    Each Celery task runs `asyncio.run(...)`, which creates a fresh event loop.
+    asyncpg connections are pinned to the loop they were opened in, so a pooled
+    engine reused across tasks will leak connections from a dead loop into a
+    live one ('attached to a different loop' RuntimeError). Using NullPool —
+    plus building a fresh engine per call — guarantees every task gets a
+    connection bound to its own loop.
+    """
+    settings = get_settings()
+    engine = create_async_engine(
+        settings.DATABASE_URL,
+        poolclass=NullPool,
+        echo=False,
+    )
+    return async_sessionmaker(
+        bind=engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+        autoflush=False,
+        autocommit=False,
+    )
 
 
 def get_engine() -> AsyncEngine:

@@ -1,23 +1,22 @@
-"""Gemini API call for technician advisory generation.
+"""LLM API call for technician advisory generation.
 
-PII stripping is applied here — BEFORE any Gemini API call (second enforcement point).
+PII stripping is applied here — BEFORE any LLM API call (second enforcement point).
 """
 
 from __future__ import annotations
 
 from datetime import UTC, datetime
 
-import google.generativeai as genai
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import get_settings
 from app.core.exceptions import AdvisoryServiceError, ClusterNotFoundError
 from app.core.logging import get_logger
 from app.core.security import strip_pii
 from app.models.cluster import Cluster
 from app.models.complaint import Complaint
 from app.schemas.cluster import AdvisoryResponse
+from app.services.llm_client import get_llm_client, get_provider_info
 
 logger = get_logger(__name__)
 
@@ -41,16 +40,14 @@ Write in clear, actionable language. No jargon. Max 250 words total."""
 
 
 async def generate_advisory(cluster_id: int, session: AsyncSession) -> AdvisoryResponse:
-    """Generate a Gemini-powered technician advisory for a cluster.
+    """Generate an LLM-powered technician advisory for a cluster.
 
-    PII stripping is applied to all complaint samples BEFORE sending to Gemini.
+    PII stripping is applied to all complaint samples BEFORE sending to the LLM.
     """
-    settings = get_settings()
-
-    if not settings.GOOGLE_API_KEY:
-        raise AdvisoryServiceError(
-            "GOOGLE_API_KEY is not configured. Set it in .env to enable advisory generation."
-        )
+    try:
+        client, model = get_llm_client()
+    except RuntimeError as exc:
+        raise AdvisoryServiceError(str(exc)) from exc
 
     result = await session.execute(select(Cluster).where(Cluster.id == cluster_id))
     cluster = result.scalar_one_or_none()
@@ -68,7 +65,7 @@ async def generate_advisory(cluster_id: int, session: AsyncSession) -> AdvisoryR
     if not sample_texts:
         raise AdvisoryServiceError(f"No complaints found for cluster {cluster_id}")
 
-    # ── PII strip BEFORE Gemini API call (rule enforced here) ─────────────────
+    # ── PII strip BEFORE LLM API call (rule enforced here) ────────────────────
     clean_samples = [strip_pii(t) for t in sample_texts]
 
     user_message = (
@@ -77,37 +74,42 @@ async def generate_advisory(cluster_id: int, session: AsyncSession) -> AdvisoryR
         + "\n".join(f"- {t}" for t in clean_samples)
     )
 
+    provider_info = get_provider_info()
+
     try:
-        genai.configure(api_key=settings.GOOGLE_API_KEY)
-        model = genai.GenerativeModel(
-            model_name=settings.GEMINI_MODEL,
-            system_instruction=_ADVISORY_SYSTEM_PROMPT,
+        response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": _ADVISORY_SYSTEM_PROMPT},
+                {"role": "user", "content": user_message},
+            ],
+            max_tokens=600,
+            temperature=0.3,
         )
-        response = model.generate_content(
-            user_message,
-            generation_config=genai.GenerationConfig(
-                max_output_tokens=600,
-                temperature=0.3,
-            ),
-        )
-        advisory_text = (response.text or "").strip()
+        advisory_text = (response.choices[0].message.content or "").strip()
         if not advisory_text:
             raise AdvisoryServiceError(
-                f"Gemini returned empty content for cluster {cluster_id}"
+                f"LLM returned empty content for cluster {cluster_id}"
             )
     except AdvisoryServiceError:
         raise
     except Exception as exc:
         logger.error(
-            "advisory_gemini_api_error", cluster_id=cluster_id, error=str(exc)
+            "advisory_llm_api_error",
+            cluster_id=cluster_id,
+            provider=provider_info["provider"],
+            error=str(exc),
         )
-        raise AdvisoryServiceError(f"Gemini API error: {exc}") from exc
+        raise AdvisoryServiceError(
+            f"{provider_info['provider']} API error: {exc}"
+        ) from exc
 
     logger.info(
         "advisory_generated",
         cluster_id=cluster_id,
         label=cluster.label,
         sample_count=len(clean_samples),
+        provider=provider_info["provider"],
     )
 
     return AdvisoryResponse(

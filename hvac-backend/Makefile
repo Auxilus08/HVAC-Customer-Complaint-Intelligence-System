@@ -1,6 +1,7 @@
 .PHONY: install dev down migrate migration seed cluster test test-unit test-integ \
         lint format worker-embed worker-sent flower logs shell check-pii \
-        clean help
+        clean help \
+        ingest-nyc ingest-cpsc ingest-apps ingest-bdg2 ingest-all
 
 # ── Colours ───────────────────────────────────────────────────────────────────
 CYAN  := \033[36m
@@ -30,6 +31,11 @@ help:
 	@echo "  $(CYAN)shell$(RESET)         Open Python shell inside backend container"
 	@echo "  $(CYAN)check-pii$(RESET)     Run PII audit script"
 	@echo "  $(CYAN)clean$(RESET)         Remove all build/cache artefacts"
+	@echo "  $(CYAN)ingest-nyc$(RESET)    Ingest NYC 311 HVAC complaints (inside container)"
+	@echo "  $(CYAN)ingest-cpsc$(RESET)   Ingest CPSC SaferProducts incidents (inside container)"
+	@echo "  $(CYAN)ingest-apps$(RESET)   Ingest Carrier app store reviews (inside container)"
+	@echo "  $(CYAN)ingest-bdg2$(RESET)   Ingest BDG2 building metadata (inside container)"
+	@echo "  $(CYAN)ingest-all$(RESET)    Run all four ingest adapters in sequence"
 	@echo ""
 
 # ── Installation ──────────────────────────────────────────────────────────────
@@ -90,6 +96,26 @@ print('Task queued:', result.id)"
 demo-check:
 	@echo "$(CYAN)Verifying demo readiness...$(RESET)"
 	python scripts/verify_demo_data.py
+
+# ── Real-data ingest adapters ─────────────────────────────────────────────────
+ingest-nyc:
+	@echo "$(CYAN)Running NYC 311 ingest adapter...$(RESET)"
+	docker exec hvac_backend python -m scripts.ingest.nyc_311 --limit 10000
+
+ingest-cpsc:
+	@echo "$(CYAN)Running CPSC SaferProducts ingest adapter...$(RESET)"
+	docker exec hvac_backend python -m scripts.ingest.cpsc --limit 1000
+
+ingest-apps:
+	@echo "$(CYAN)Running app store reviews ingest adapter...$(RESET)"
+	docker exec hvac_backend python -m scripts.ingest.app_store
+
+ingest-bdg2:
+	@echo "$(CYAN)Running BDG2 building metadata ingest adapter...$(RESET)"
+	docker exec hvac_backend python -m scripts.ingest.bdg2
+
+ingest-all: ingest-bdg2 ingest-nyc ingest-cpsc ingest-apps
+	@echo "$(CYAN)All adapters complete. Run 'make cluster && make label-job' to refresh clusters.$(RESET)"
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
 test:

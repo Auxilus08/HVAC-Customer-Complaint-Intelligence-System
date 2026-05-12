@@ -16,7 +16,7 @@ export default function KeyboardHelp() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-4 right-4 z-30 w-9 h-9 rounded-full bg-surface-card border border-surface-border text-slate-300 hover:text-accent hover:border-accent shadow-lg flex items-center justify-center text-sm font-bold"
+        className="fixed bottom-4 right-4 z-30 w-9 h-9 rounded-full bg-surface-card border border-surface-border text-ink-700 hover:text-accent hover:border-accent shadow-lg flex items-center justify-center text-sm font-bold"
         aria-label="Keyboard shortcuts"
         title="Keyboard shortcuts"
       >
@@ -31,11 +31,11 @@ export default function KeyboardHelp() {
             className="bg-surface-card border border-surface-border rounded-xl p-6 max-w-sm w-full shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-lg font-bold text-white mb-4 tracking-tight">Keyboard Shortcuts</h3>
+            <h3 className="text-lg font-bold text-ink-900 mb-4 tracking-tight">Keyboard Shortcuts</h3>
             <ul className="space-y-2">
               {SHORTCUTS.map(([key, desc]) => (
                 <li key={key} className="flex items-center justify-between text-sm">
-                  <span className="text-slate-300">{desc}</span>
+                  <span className="text-ink-700">{desc}</span>
                   <kbd className="bg-surface text-accent border border-surface-border rounded px-2 py-0.5 font-mono text-xs">
                     {key}
                   </kbd>

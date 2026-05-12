@@ -7,20 +7,21 @@ by ``pipeline.sentiment.SentimentAnalyzer`` — change them there, not here.
 from __future__ import annotations
 
 from celery import Task
-from celery.utils.log import get_task_logger
-from sqlalchemy import select
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.config import get_settings
+from app.core.logging import get_logger
 from app.workers.celery_app import celery_app
 
-logger = get_task_logger(__name__)
+logger = get_logger(__name__)
 settings = get_settings()
 
 
 class SentimentTask(Task):
     abstract = True
     _analyzer = None
-    _session_factory = None
+    _session_factory: sessionmaker[Session] | None = None
 
     @property
     def analyzer(self):  # type: ignore[override]
@@ -32,11 +33,16 @@ class SentimentTask(Task):
         return self._analyzer
 
     @property
-    def session_factory(self):
+    def session_factory(self) -> sessionmaker[Session]:
         if self._session_factory is None:
-            from app.db.session import get_session_factory
-
-            self._session_factory = get_session_factory()
+            engine = create_engine(
+                settings.DATABASE_SYNC_URL,
+                pool_size=2,
+                max_overflow=1,
+                pool_pre_ping=True,
+                echo=False,
+            )
+            self._session_factory = sessionmaker(bind=engine, expire_on_commit=False)
         return self._session_factory
 
 
@@ -50,43 +56,26 @@ class SentimentTask(Task):
 )
 def score_sentiment(self: SentimentTask, complaint_id: int) -> dict:  # type: ignore[misc]
     """Compute VADER sentiment via hvac-ml and persist score + label."""
-    import asyncio
+    from app.models.complaint import Complaint
 
-    logger.info("sentiment_task_started", complaint_id=complaint_id)
-
-    async def _run() -> dict:
-        from app.models.complaint import Complaint
-
-        async with self.session_factory() as session:
-            result = await session.execute(
+    try:
+        with self.session_factory() as session:
+            complaint = session.execute(
                 select(Complaint).where(Complaint.id == complaint_id)
-            )
-            complaint = result.scalar_one_or_none()
+            ).scalar_one_or_none()
             if complaint is None:
                 return {"status": "skipped", "reason": "not_found"}
 
             sentiment = self.analyzer.score(complaint.clean_text)
-
             complaint.sentiment_score = sentiment.compound
             complaint.sentiment_label = sentiment.label
-            await session.commit()
+            session.commit()
 
-        logger.debug(
-            "sentiment_scored",
-            complaint_id=complaint_id,
-            compound=sentiment.compound,
-            label=sentiment.label,
-        )
         return {
             "status": "ok",
             "complaint_id": complaint_id,
             "label": sentiment.label,
         }
-
-    try:
-        result = asyncio.run(_run())
-        logger.info("sentiment_task_completed", complaint_id=complaint_id)
-        return result
     except Exception as exc:
         logger.error(
             "sentiment_task_failed",

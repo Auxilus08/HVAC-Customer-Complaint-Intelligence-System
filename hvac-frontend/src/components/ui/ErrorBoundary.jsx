@@ -20,10 +20,10 @@ export default class ErrorBoundary extends Component {
       return (
         <div className="card flex flex-col items-center justify-center p-8 text-center">
           <div className="text-critical text-4xl mb-3">⚠</div>
-          <p className="text-slate-300 font-medium mb-1">
+          <p className="text-ink-700 font-medium mb-1">
             Component failed to render
           </p>
-          <p className="text-slate-500 text-sm mb-4 max-w-md break-words">
+          <p className="text-ink-500 text-sm mb-4 max-w-md break-words">
             {this.state.error?.message || "Unknown error"}
           </p>
           <button onClick={this.reset} className="btn-ghost text-sm">

@@ -1,15 +1,11 @@
 import { useAlerts } from "../hooks/useAlerts";
-import {
-  asArray,
-  formatCurrencyINR,
-  formatPercent,
-} from "../utils/format";
+import { asArray, formatPercent } from "../utils/format";
 
 const severityClasses = (severity) => {
   const s = (severity || "").toLowerCase();
-  if (s === "critical") return "bg-critical/10 border-l-4 border-critical hover:bg-critical/15";
-  if (s === "warning" || s === "high") return "bg-high/10 border-l-4 border-high hover:bg-high/15";
-  return "bg-accent/10 border-l-4 border-accent hover:bg-accent/15";
+  if (s === "critical") return "bg-status-critical/8 border-l-4 border-status-critical hover:bg-status-critical/12";
+  if (s === "warning" || s === "high") return "bg-status-high/8 border-l-4 border-status-high hover:bg-status-high/12";
+  return "bg-carrier-light border-l-4 border-carrier hover:bg-carrier-light/80";
 };
 
 const severityLabel = (severity) => {
@@ -31,53 +27,41 @@ export default function AlertBanner({ onClusterSelect }) {
 
   return (
     <div
-      className="bg-surface-card/60 border-b border-surface-border px-6 py-3 animate-fade-in flex-shrink-0"
+      className="bg-surface-card border-b border-surface-border px-6 py-3 animate-fade-in flex-shrink-0"
       data-demo-anchor="alert-banner"
     >
       <div className="flex items-center gap-3 overflow-x-auto">
-        <div className="text-[11px] uppercase tracking-wider text-slate-500 font-semibold shrink-0">
+        <div className="text-[11px] uppercase tracking-wider text-ink-500 font-semibold shrink-0">
           Active Alerts
         </div>
         {visible.map((a) => {
           const id = a.cluster_id ?? a.id;
           const label = a.label || a.cluster_label || "Unlabeled cluster";
           const region = a.region || (Array.isArray(a.regions) ? a.regions[0] : null);
-          const wow =
-            a.growth_pct_wow ?? a.wow_growth_pct ?? a.growth_pct ?? a.wow ?? null;
+          const wow = a.growth_pct_wow ?? a.wow_growth_pct ?? a.growth_pct ?? a.wow ?? null;
           const count = a.complaint_count ?? a.member_count ?? a.count ?? 0;
-          const exposureRaw =
-            a.cost_exposure_estimate ??
-            a.exposure_inr ??
-            a.cost_exposure ??
-            a.exposure ??
-            null;
-          const exposure = exposureRaw != null ? Number(exposureRaw) : null;
           return (
             <button
               key={`${id}-${label}`}
               type="button"
               onClick={() => id != null && onClusterSelect?.(id)}
-              className={`shrink-0 min-w-[280px] max-w-[360px] rounded-lg px-3 py-2 text-left transition-colors cursor-pointer ${severityClasses(a.severity)}`}
+              className={`shrink-0 min-w-[260px] max-w-[340px] rounded-lg px-3 py-2 text-left transition-colors cursor-pointer ${severityClasses(a.severity)}`}
             >
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="text-base">🚨</span>
-                  <span className="text-sm font-semibold text-slate-100 truncate">
+                  <span className="text-sm font-semibold text-ink-900 truncate">
                     {label}
-                    {region ? <span className="text-slate-400 font-normal"> — {region}</span> : null}
+                    {region ? <span className="text-ink-500 font-normal"> — {region}</span> : null}
                   </span>
                 </div>
                 {wow != null && (
-                  <span className="text-xs font-mono text-accent font-semibold shrink-0">
+                  <span className="text-xs font-mono text-carrier font-semibold shrink-0">
                     {formatPercent(wow)} WoW
                   </span>
                 )}
               </div>
-              <div className="flex items-center justify-between mt-1 text-xs text-slate-400">
-                <span>
-                  {count} complaints
-                  {exposure != null ? ` · ${formatCurrencyINR(exposure)} exposure` : ""}
-                </span>
+              <div className="flex items-center justify-between mt-1 text-xs text-ink-500">
+                <span>{count} complaints</span>
                 <span className={severityBadge(a.severity)}>
                   {severityLabel(a.severity)}
                 </span>

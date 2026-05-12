@@ -14,8 +14,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install uv for fast, deterministic dependency resolution
 RUN pip install --no-cache-dir uv==0.2.18
 
-# Copy dependency manifest only — maximise Docker layer cache
-COPY pyproject.toml .
+# Copy dependency manifests. hvac-ml is a sibling path-source, so it must be
+# present at /hvac-ml before uv resolves "../hvac-ml" from /build/pyproject.toml.
+COPY hvac-backend/pyproject.toml .
+COPY hvac-ml /hvac-ml
 
 # Install all production + dev deps into an isolated venv
 RUN uv venv /app/venv && \
@@ -40,11 +42,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy the fully built venv from the builder stage
 COPY --from=builder /app/venv /app/venv
 
+# hvac-ml was editable-installed in the builder stage; the venv's .pth file
+# points at /hvac-ml. Copy the source into runtime so the import resolves.
+COPY hvac-ml /hvac-ml
+
 # Copy application source
-COPY app/ ./app/
-COPY alembic/ ./alembic/
-COPY alembic.ini .
-COPY scripts/ ./scripts/
+COPY hvac-backend/app/ ./app/
+COPY hvac-backend/alembic/ ./alembic/
+COPY hvac-backend/alembic.ini .
+COPY hvac-backend/scripts/ ./scripts/
 
 # Create non-root user for security
 RUN groupadd --gid 1001 appgroup && \
@@ -65,4 +71,4 @@ EXPOSE 8000
 HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-ENTRYPOINT ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

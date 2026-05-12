@@ -42,6 +42,8 @@ async def ingest_complaints(
             product_sku=payload.product_sku,
             customer_id=payload.customer_id,
             technician_id=payload.technician_id,
+            external_id=payload.external_id,
+            language=payload.language,
             status="pending",
         )
         session.add(complaint)
@@ -55,23 +57,19 @@ async def ingest_complaints(
         )
         accepted += 1
 
-        # Chain: embed first, THEN score sentiment to avoid concurrent writes
-        # to the same Complaint row (lost-update race condition).
-        from celery import chain
-
-        pipeline = chain(
-            celery_app.signature(
-                "app.workers.embedding_worker.embed_complaint",
-                args=[complaint.id],
-                queue="embeddings",
-            ),
-            celery_app.signature(
-                "app.workers.sentiment_worker.score_sentiment",
-                args=[complaint.id],
-                queue="sentiment",
-            ),
+        # Embed and sentiment write disjoint columns, so they can run in parallel.
+        # `chain(...).apply_async()` was previously failing silently on the redis
+        # broker — switching to two independent send_task calls is observably reliable.
+        celery_app.send_task(
+            "app.workers.embedding_worker.embed_complaint",
+            args=[complaint.id],
+            queue="embeddings",
         )
-        pipeline.apply_async()
+        celery_app.send_task(
+            "app.workers.sentiment_worker.score_sentiment",
+            args=[complaint.id],
+            queue="sentiment",
+        )
         queued += 1
 
     await session.commit()

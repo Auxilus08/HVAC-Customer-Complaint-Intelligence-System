@@ -6,7 +6,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import BigInteger, Boolean, Float, Index, Numeric, String
+from sqlalchemy import BigInteger, Boolean, DateTime, Float, Index, Numeric, String, text
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -18,7 +18,9 @@ class Cluster(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     label: Mapped[str | None] = mapped_column(String(200), nullable=True)
-    label_updated_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    label_updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     fingerprint_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     member_count: Mapped[int | None] = mapped_column(nullable=True)
     centroid: Mapped[list[float] | None] = mapped_column(Vector(384), nullable=True)
@@ -28,7 +30,9 @@ class Cluster(Base):
     cost_exposure_estimate: Mapped[Decimal | None] = mapped_column(
         Numeric(12, 2), nullable=True
     )
-    created_at: Mapped[datetime] = mapped_column(nullable=False, server_default="NOW()")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("NOW()")
+    )
     last_run_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
     previous_member_ids: Mapped[list[int] | None] = mapped_column(
         ARRAY(BigInteger), nullable=True

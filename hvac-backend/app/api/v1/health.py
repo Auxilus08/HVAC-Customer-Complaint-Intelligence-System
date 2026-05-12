@@ -1,4 +1,4 @@
-"""Rich health endpoint with DB / Redis / ML / Gemini sub-checks.
+"""Rich health endpoint with DB / Redis / ML / LLM sub-checks.
 
 Each check runs in parallel with a 2s timeout and never crashes the
 endpoint — failed checks downgrade ``status`` instead of raising.
@@ -98,34 +98,35 @@ async def _ml_check() -> dict[str, Any]:
     }
 
 
-async def _gemini_check() -> dict[str, Any]:
-    sf = get_session_factory()
-    async with sf() as s:
-        last_label = (
-            await s.execute(
-                select(func.max(Cluster.label_updated_at)).where(Cluster.label.is_not(None))
-            )
-        ).scalar_one_or_none()
-    return {
-        "status": "ok",
-        "last_label_job": last_label.isoformat() if last_label else None,
-        "llm_calls_today": None,
-    }
+async def _llm_check() -> dict[str, Any]:
+    from app.services.llm_client import get_llm_client, get_provider_info
+
+    info = get_provider_info()
+    try:
+        client, model = get_llm_client()
+        client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": "ping"}],
+            max_tokens=1,
+        )
+        return {"status": "ok", "provider": info["provider"], "model": info["model"]}
+    except Exception as exc:
+        return {"status": "down", "provider": info["provider"], "error": str(exc)[:200]}
 
 
-@router.get("/health", summary="Rich health check (DB / Redis / ML / Gemini)")
+@router.get("/health", summary="Rich health check (DB / Redis / ML / LLM)")
 async def health() -> dict[str, Any]:
     settings = get_settings()
-    db, redis_, ml, gemini = await asyncio.gather(
+    db, redis_, ml, llm = await asyncio.gather(
         _with_timeout(_db_check(), {"status": "down"}),
         _with_timeout(_redis_check(), {"status": "down"}),
         _with_timeout(_ml_check(), {"status": "down"}),
-        _with_timeout(_gemini_check(), {"status": "down"}),
+        _with_timeout(_llm_check(), {"status": "down"}),
     )
     overall = "ok"
     if db.get("status") != "ok":
         overall = "down"
-    elif any(c.get("status") != "ok" for c in (redis_, ml, gemini)):
+    elif any(c.get("status") != "ok" for c in (redis_, ml, llm)):
         overall = "degraded"
     return {
         "status": overall,
@@ -136,6 +137,6 @@ async def health() -> dict[str, Any]:
             "database": db,
             "redis": redis_,
             "ml_pipeline": ml,
-            "gemini_api": gemini,
+            "llm_api": llm,
         },
     }

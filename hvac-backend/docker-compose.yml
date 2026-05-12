@@ -3,8 +3,8 @@ version: "3.9"
 # ── Shared defaults ────────────────────────────────────────────────────────────
 x-backend-base: &backend-base
   build:
-    context: .
-    dockerfile: Dockerfile
+    context: ..
+    dockerfile: hvac-backend/Dockerfile
     target: runtime
   env_file: .env
   environment:
@@ -84,7 +84,6 @@ services:
       --port 8000
       --reload
       --reload-dir /app/app
-      --log-config /dev/null
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 15s
@@ -101,7 +100,7 @@ services:
     command: >
       celery -A app.workers.celery_app.celery_app worker
       --queues=embeddings
-      --concurrency=4
+      --concurrency=1
       --loglevel=info
       --logfile=/app/logs/embedding_worker.log
       --hostname=embed@%h

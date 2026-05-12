@@ -13,13 +13,13 @@ from datetime import UTC, datetime
 
 import numpy as np
 from celery import Task
-from celery.utils.log import get_task_logger
+from app.core.logging import get_logger
 from sqlalchemy import select, update
 
 from app.config import get_settings
 from app.workers.celery_app import celery_app
 
-_celery_logger = get_task_logger(__name__)
+_celery_logger = get_logger(__name__)
 
 
 class _KwargAdapter:

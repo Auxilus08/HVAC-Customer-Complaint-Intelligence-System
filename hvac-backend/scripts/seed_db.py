@@ -49,7 +49,7 @@ async def seed(csv_path: Path, limit: int) -> None:
             clean_text = strip_pii(raw_text)
             complaint = Complaint(
                 clean_text=clean_text,
-                source=row.get("source") or None,
+                source="synthetic",
                 region=row.get("region") or None,
                 product_sku=row.get("product_sku") or None,
                 status="pending",

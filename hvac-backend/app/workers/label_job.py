@@ -10,13 +10,13 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from celery import Task
-from celery.utils.log import get_task_logger
+from app.core.logging import get_logger
 from sqlalchemy import select
 
 from app.config import get_settings
 from app.workers.celery_app import celery_app
 
-logger = get_task_logger(__name__)
+logger = get_logger(__name__)
 settings = get_settings()
 
 
@@ -26,11 +26,9 @@ class LabelTask(Task):
 
     @property
     def session_factory(self):
-        if self._session_factory is None:
-            from app.db.session import get_session_factory
+        from app.db.session import get_worker_session_factory
 
-            self._session_factory = get_session_factory()
-        return self._session_factory
+        return get_worker_session_factory()
 
 
 @celery_app.task(
@@ -52,10 +50,12 @@ def label_clusters(self: LabelTask, run_id: str) -> dict:  # type: ignore[misc]
     async def _run() -> dict:
         from app.models.cluster import Cluster
         from app.models.complaint import Complaint
+        from app.services.llm_client import get_llm_client
 
+        llm_client, llm_model = get_llm_client()
         labeler = ClusterLabeler(
-            model=settings.GEMINI_MODEL,
-            api_key=settings.GOOGLE_API_KEY,
+            model=llm_model,
+            client=llm_client,
         )
 
         async with self.session_factory() as session:
@@ -121,7 +121,11 @@ def label_clusters(self: LabelTask, run_id: str) -> dict:  # type: ignore[misc]
 
     try:
         result = asyncio.run(_run())
-        logger.info("label_job_completed", run_id=run_id, **result)
+        logger.info(
+            "label_job_completed",
+            run_id=run_id,
+            llm_calls_made=result.get("llm_calls_made"),
+        )
         return result
     except Exception as exc:
         logger.error("label_job_failed", run_id=run_id, error=str(exc))

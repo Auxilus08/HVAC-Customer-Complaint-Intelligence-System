@@ -49,10 +49,10 @@ export const formatRelativeTime = (date) => {
 export const formatCurrencyINR = (value) => {
   if (value === null || value === undefined || Number.isNaN(value)) return "—";
   const n = Number(value);
-  if (n >= 1e7) return `Rs.${(n / 1e7).toFixed(1)}Cr`;
-  if (n >= 1e5) return `Rs.${(n / 1e5).toFixed(1)}L`;
-  if (n >= 1e3) return `Rs.${(n / 1e3).toFixed(1)}K`;
-  return `Rs.${n.toFixed(0)}`;
+  if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}B`;
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
+  if (n >= 1e3) return `$${(n / 1e3).toFixed(1)}K`;
+  return `$${n.toFixed(0)}`;
 };
 
 export const formatPercent = (value, withSign = true) => {
@@ -68,11 +68,25 @@ export const truncate = (text, n = 100) => {
 };
 
 export const growthColorClass = (pct) => {
-  if (pct === null || pct === undefined || Number.isNaN(pct)) return "text-slate-200";
+  if (pct === null || pct === undefined || Number.isNaN(pct)) return "text-ink-900";
   if (pct < 0) return "text-positive";
   if (pct > 100) return "text-critical";
   if (pct > 30) return "text-high";
-  return "text-slate-200";
+  return "text-ink-900";
+};
+
+export const formatNumber = (n) => {
+  if (n === null || n === undefined || Number.isNaN(n)) return "—";
+  return new Intl.NumberFormat("en-US").format(Number(n));
+};
+
+export const formatCompact = (n) => {
+  if (n === null || n === undefined || Number.isNaN(n)) return "—";
+  const num = Number(n);
+  if (num >= 1_000_000_000) return `$${(num / 1_000_000_000).toFixed(1)}B`;
+  if (num >= 1_000_000) return `$${(num / 1_000_000).toFixed(1)}M`;
+  if (num >= 1_000) return `$${(num / 1_000).toFixed(1)}K`;
+  return `$${num.toFixed(0)}`;
 };
 
 export const asArray = (v) => {

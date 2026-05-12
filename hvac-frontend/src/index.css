@@ -5,10 +5,10 @@
 
 @layer base {
   html {
-    @apply bg-surface text-slate-100 font-sans antialiased;
+    @apply bg-surface-soft text-ink-900 font-sans antialiased;
   }
   body {
-    @apply bg-surface;
+    @apply bg-surface-soft;
   }
   * {
     @apply border-surface-border;
@@ -17,45 +17,59 @@
     @apply w-1.5 h-1.5;
   }
   ::-webkit-scrollbar-track {
-    @apply bg-surface;
+    @apply bg-surface-soft;
   }
   ::-webkit-scrollbar-thumb {
-    @apply bg-surface-border rounded-full;
+    @apply bg-ink-300 rounded-full;
   }
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-slate-500;
+    @apply bg-ink-500;
   }
 }
 
 @layer components {
   .card {
-    @apply bg-surface-card border border-surface-border rounded-xl p-4 shadow-lg;
+    @apply bg-surface-card border border-surface-border rounded-xl p-4 shadow-sm;
   }
   .btn-primary {
-    @apply bg-accent hover:bg-accent-dark text-white font-medium px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2;
+    @apply bg-carrier hover:bg-carrier-dark text-white font-medium px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2;
   }
   .btn-ghost {
-    @apply bg-transparent hover:bg-surface-hover text-slate-300 hover:text-white px-3 py-1.5 rounded-lg transition-colors inline-flex items-center justify-center gap-1.5;
+    @apply bg-transparent hover:bg-ink-100 text-ink-700 hover:text-ink-900 px-3 py-1.5 rounded-lg transition-colors inline-flex items-center justify-center gap-1.5;
   }
   .badge-critical {
-    @apply bg-critical/20 text-critical text-xs px-2 py-0.5 rounded-full font-medium;
+    @apply bg-status-critical/10 text-status-critical text-xs px-2 py-0.5 rounded-full font-medium;
   }
   .badge-high {
-    @apply bg-high/20 text-high text-xs px-2 py-0.5 rounded-full font-medium;
+    @apply bg-status-high/10 text-status-high text-xs px-2 py-0.5 rounded-full font-medium;
   }
   .badge-normal {
-    @apply bg-normal/20 text-normal text-xs px-2 py-0.5 rounded-full font-medium;
+    @apply bg-status-normal/10 text-status-normal text-xs px-2 py-0.5 rounded-full font-medium;
   }
   .badge-positive {
-    @apply bg-positive/20 text-positive text-xs px-2 py-0.5 rounded-full font-medium;
+    @apply bg-status-positive/10 text-status-positive text-xs px-2 py-0.5 rounded-full font-medium;
   }
   .badge-emerging {
-    @apply bg-accent/20 text-accent text-xs px-2 py-0.5 rounded-full font-medium animate-pulse-slow;
+    @apply bg-carrier-light text-carrier text-xs px-2 py-0.5 rounded-full font-medium;
   }
   .chip {
-    @apply bg-surface-hover text-slate-300 px-3 py-1 rounded-full text-sm whitespace-nowrap;
+    @apply bg-ink-100 text-ink-700 px-3 py-1 rounded-full text-sm whitespace-nowrap;
   }
   .demo-highlight {
-    @apply ring-2 ring-accent ring-offset-2 ring-offset-surface rounded-xl transition-all;
+    @apply ring-2 ring-carrier ring-offset-2 ring-offset-surface-soft rounded-xl transition-all;
   }
+}
+
+/* Leaflet overrides */
+.leaflet-tooltip {
+  font-family: Inter, system-ui, sans-serif;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+  background: #FFFFFF;
+}
+.leaflet-tooltip-top:before {
+  border-top-color: #E2E8F0;
+}
+.leaflet-container {
+  font-family: Inter, system-ui, sans-serif;
 }

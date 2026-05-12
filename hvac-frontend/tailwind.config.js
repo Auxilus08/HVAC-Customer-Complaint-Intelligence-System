@@ -5,28 +5,36 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: { DEFAULT: "#1e3a5f", light: "#2a5298", dark: "#0f1e30" },
-        accent: { DEFAULT: "#e85d04", light: "#fb923c", dark: "#c2410c" },
-        critical: "#dc2626",
-        high: "#f59e0b",
-        normal: "#6b7280",
-        positive: "#16a34a",
-        c0: "#6366f1",
-        c1: "#e85d04",
-        c2: "#10b981",
-        c3: "#f59e0b",
-        c4: "#3b82f6",
-        c5: "#ec4899",
-        c6: "#14b8a6",
-        c7: "#a855f7",
-        c8: "#84cc16",
-        c9: "#f97316",
-        surface: {
-          DEFAULT: "#0f172a",
-          card: "#1e293b",
-          border: "#334155",
-          hover: "#2d3f55",
+        carrier: {
+          DEFAULT: "#1E3A5F",
+          dark: "#15294A",
+          light: "#EEF2F8",
         },
+        ink: {
+          900: "#0F172A",
+          700: "#334155",
+          500: "#64748B",
+          300: "#CBD5E1",
+          100: "#F1F5F9",
+        },
+        surface: {
+          DEFAULT: "#FFFFFF",
+          soft: "#F8FAFC",
+          card: "#FFFFFF",
+          border: "#E2E8F0",
+        },
+        status: {
+          critical: "#DC2626",
+          high: "#F59E0B",
+          normal: "#94A3B8",
+          positive: "#16A34A",
+        },
+        // kept for backward compat in components not yet migrated
+        accent: { DEFAULT: "#1E3A5F", light: "#EEF2F8", dark: "#15294A" },
+        critical: "#DC2626",
+        high: "#F59E0B",
+        normal: "#94A3B8",
+        positive: "#16A34A",
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],

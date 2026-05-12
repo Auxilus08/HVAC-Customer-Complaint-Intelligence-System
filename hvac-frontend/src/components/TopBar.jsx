@@ -1,115 +1,85 @@
-import { useEffect, useRef, useState } from "react";
 import { useHealth } from "../hooks/useHealth";
-import { useClusters } from "../hooks/useClusters";
-import { useStats } from "../hooks/useAnalytics";
-import { formatRelativeTime } from "../utils/format";
 
-function StatPill({ value, label, valueClass = "text-slate-100" }) {
-  if (value === undefined || value === null) {
-    return (
-      <span className="bg-surface-hover rounded-full px-3 py-1 text-xs flex items-center gap-1.5 animate-pulse">
-        <span className="w-6 h-3 bg-surface-border rounded" />
-      </span>
-    );
-  }
+const NAV_TABS = [
+  { id: "overview", label: "Overview" },
+  { id: "themes", label: "Themes" },
+  { id: "map", label: "Map" },
+  { id: "search", label: "Search" },
+];
+
+function HealthPill() {
+  const health = useHealth();
+  const ok = health.isSuccess && !health.isError;
   return (
-    <span className="bg-surface-hover rounded-full px-3 py-1 text-xs flex items-center gap-1.5">
-      <span className={`font-mono font-semibold ${valueClass}`}>{value}</span>
-      <span className="text-slate-400">{label}</span>
+    <span
+      className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${
+        ok
+          ? "bg-status-positive/10 text-status-positive"
+          : "bg-status-critical/10 text-status-critical"
+      }`}
+    >
+      <span className="relative flex h-1.5 w-1.5">
+        {ok && (
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-status-positive opacity-60" />
+        )}
+        <span
+          className={`relative inline-flex rounded-full h-1.5 w-1.5 ${
+            ok ? "bg-status-positive" : "bg-status-critical"
+          }`}
+        />
+      </span>
+      {ok ? "Live" : "Offline"}
     </span>
   );
 }
 
-export default function TopBar({
-  onUploadClick,
-  onDemoClick,
-  onSearchClick,
-  showDemoButton,
-}) {
-  const health = useHealth();
-  const clusters = useClusters();
-  const stats = useStats();
-  const [, setTick] = useState(0);
-  const lastSuccessRef = useRef(null);
-
-  useEffect(() => {
-    if (clusters.isSuccess && clusters.dataUpdatedAt) {
-      lastSuccessRef.current = new Date(clusters.dataUpdatedAt);
-    }
-  }, [clusters.isSuccess, clusters.dataUpdatedAt]);
-
-  useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), 15_000);
-    return () => clearInterval(id);
-  }, []);
-
-  const isHealthy = health.isSuccess && !health.isError;
-  const dotColor = isHealthy ? "bg-positive" : "bg-critical";
-  const statusText = isHealthy ? "Live" : "Disconnected";
-
-  const s = stats.data || {};
-  const emergingValue = stats.isLoading ? null : s.emerging_clusters ?? 0;
-
+export default function TopBar({ activeTab, onTabChange, onUploadClick, onSearchClick }) {
   return (
     <header
-      className="h-14 bg-surface-card border-b border-surface-border px-6 flex items-center justify-between flex-shrink-0"
+      className="h-14 bg-surface-card border-b border-surface-border px-6 flex items-center justify-between flex-shrink-0 shadow-sm"
       data-demo-anchor="topbar"
     >
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-accent-dark flex items-center justify-center shadow-lg shadow-accent/20">
-            <svg viewBox="0 0 24 24" className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 12h3l3-9 6 18 3-9h3" />
-            </svg>
-          </div>
-          <div className="leading-tight">
-            <h1 className="font-bold text-white text-base tracking-tight">
-              HVAC Intelligence
-            </h1>
-            <p className="text-slate-400 text-[11px]">
-              Complaint Analysis System
-            </p>
-          </div>
-        </div>
-
-        <div className="hidden lg:flex items-center gap-1.5" data-demo-anchor="stats-pills">
-          <StatPill
-            value={stats.isLoading ? null : s.total_complaints ?? 0}
-            label="complaints"
-          />
-          <StatPill
-            value={stats.isLoading ? null : s.total_clusters ?? 0}
-            label="clusters"
-          />
-          <StatPill
-            value={emergingValue == null ? null : `${emergingValue} 🚨`}
-            label="emerging"
-            valueClass={emergingValue > 0 ? "text-critical" : "text-positive"}
-          />
+      {/* Logo */}
+      <div className="flex items-center gap-3">
+        <div className="w-2 h-7 rounded-sm bg-carrier flex-shrink-0" />
+        <div className="leading-tight">
+          <h1 className="font-bold text-ink-900 text-base tracking-tight">
+            HVAC Intelligence
+          </h1>
+          <p className="text-ink-500 text-[10px] leading-none">by Carrier</p>
         </div>
       </div>
 
+      {/* Nav tabs */}
+      <nav className="hidden md:flex items-center gap-1">
+        {NAV_TABS.map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => onTabChange(tab.id)}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors relative ${
+                isActive
+                  ? "text-carrier"
+                  : "text-ink-700 hover:text-ink-900 hover:bg-ink-100"
+              }`}
+            >
+              {tab.label}
+              {isActive && (
+                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-3/4 h-0.5 bg-carrier rounded-full" />
+              )}
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* Right side */}
       <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2 text-xs">
-          <span className="relative flex h-2 w-2">
-            {isHealthy && (
-              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${dotColor} opacity-60`} />
-            )}
-            <span className={`relative inline-flex rounded-full h-2 w-2 ${dotColor}`} />
-          </span>
-          <span className={isHealthy ? "text-positive" : "text-critical"}>
-            {statusText}
-          </span>
-        </div>
-
-        <div className="text-xs text-slate-400 hidden md:block">
-          Updated {formatRelativeTime(lastSuccessRef.current)}
-        </div>
-
+        <HealthPill />
         <button
           onClick={onSearchClick}
           className="btn-ghost text-sm"
-          title="Search complaints (press /)"
+          title="Search (press /)"
           aria-label="Search"
         >
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -117,17 +87,6 @@ export default function TopBar({
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
         </button>
-
-        {showDemoButton && (
-          <button
-            onClick={onDemoClick}
-            className="btn-ghost text-sm"
-            title="Run demo walkthrough (D)"
-          >
-            <span className="text-accent">▶</span> Demo Mode
-          </button>
-        )}
-
         <button
           onClick={onUploadClick}
           className="btn-primary text-sm"

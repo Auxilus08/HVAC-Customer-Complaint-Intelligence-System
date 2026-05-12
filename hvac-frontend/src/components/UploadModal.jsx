@@ -73,12 +73,12 @@ export default function UploadModal({ onClose }) {
         onClick={(e) => e.stopPropagation()}
       >
         <header className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-bold text-white tracking-tight">
+          <h2 className="text-lg font-bold text-ink-900 tracking-tight">
             Upload Complaint Data
           </h2>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-white transition-colors p-1 rounded hover:bg-surface-hover"
+            className="text-ink-500 hover:text-ink-900 transition-colors p-1 rounded hover:bg-surface-hover"
             aria-label="Close"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -95,10 +95,10 @@ export default function UploadModal({ onClose }) {
                 <polyline points="20 6 9 17 4 12" />
               </svg>
             </div>
-            <p className="text-slate-100 font-medium mt-4">
+            <p className="text-ink-900 font-medium mt-4">
               {success.count != null ? `${success.count} complaints` : "Complaints"} uploaded successfully
             </p>
-            <p className="text-slate-400 text-sm mt-1">
+            <p className="text-ink-500 text-sm mt-1">
               Processing in background — clusters will update shortly
             </p>
           </div>
@@ -121,22 +121,22 @@ export default function UploadModal({ onClose }) {
                     <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
                     <polyline points="22 4 12 14.01 9 11.01" />
                   </svg>
-                  <p className="text-slate-100 text-sm font-medium">{file.name}</p>
-                  <p className="text-slate-400 text-xs">
+                  <p className="text-ink-900 text-sm font-medium">{file.name}</p>
+                  <p className="text-ink-500 text-xs">
                     {formatBytes(file.size)} · Ready to upload
                   </p>
                 </div>
               ) : (
-                <div className="flex flex-col items-center gap-2 text-slate-400">
+                <div className="flex flex-col items-center gap-2 text-ink-500">
                   <svg className="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                     <polyline points="17 8 12 3 7 8" />
                     <line x1="12" y1="3" x2="12" y2="15" />
                   </svg>
-                  <p className="text-slate-200 font-medium text-sm">
+                  <p className="text-ink-900 font-medium text-sm">
                     Drop your CSV file here
                   </p>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-ink-500">
                     or click to browse · Max 10MB
                   </p>
                 </div>
@@ -153,12 +153,12 @@ export default function UploadModal({ onClose }) {
               <button
                 type="button"
                 onClick={() => setShowFormat((v) => !v)}
-                className="text-xs text-slate-400 hover:text-accent transition-colors"
+                className="text-xs text-ink-500 hover:text-accent transition-colors"
               >
                 {showFormat ? "▼" : "▶"} Expected CSV format
               </button>
               {showFormat && (
-                <pre className="mt-2 text-[11px] bg-surface px-3 py-2 rounded-md font-mono text-slate-300 border border-surface-border overflow-x-auto">
+                <pre className="mt-2 text-[11px] bg-surface px-3 py-2 rounded-md font-mono text-ink-700 border border-surface-border overflow-x-auto">
 {`complaint_text,source,region,product_sku
 "AC not cooling",crm,Delhi,1.5T-SPLIT`}
                 </pre>
@@ -169,7 +169,7 @@ export default function UploadModal({ onClose }) {
               <div className="mt-3 bg-critical/10 border border-critical/40 text-critical rounded-lg p-3 text-sm flex items-start justify-between gap-3">
                 <span>{upload.error?.message || "Upload failed"}</span>
                 <button
-                  className="text-xs underline whitespace-nowrap hover:text-white"
+                  className="text-xs underline whitespace-nowrap hover:text-ink-900"
                   onClick={handleUpload}
                 >
                   Try Again

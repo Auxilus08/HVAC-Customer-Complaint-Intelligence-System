@@ -12,13 +12,13 @@ from decimal import Decimal
 
 import pandas as pd
 from celery import Task
-from celery.utils.log import get_task_logger
+from app.core.logging import get_logger
 from sqlalchemy import select
 
 from app.config import get_settings
 from app.workers.celery_app import celery_app
 
-logger = get_task_logger(__name__)
+logger = get_logger(__name__)
 settings = get_settings()
 
 
