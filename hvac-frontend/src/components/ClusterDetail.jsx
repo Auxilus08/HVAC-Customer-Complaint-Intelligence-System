@@ -26,6 +26,7 @@ import {
 } from "../utils/format";
 import Spinner from "./ui/Spinner";
 import ErrorBanner from "./ui/ErrorBanner";
+import ClusterChatPanel from "./ClusterChatPanel";
 import { exportClusterCSV, exportAdvisoryText } from "../hooks/useExport";
 
 const parseAdvisorySections = (text) => {
@@ -135,7 +136,7 @@ function AdvisorySection({ id, cluster }) {
       {!enabled && !advisory.isSuccess && (
         <div className="bg-surface/60 border border-surface-border rounded-lg p-5 text-center">
           <p className="text-ink-700 text-sm mb-3">
-            Generate a Gemini-powered technician advisory for this complaint
+            Generate a DeepSeek-powered technician advisory for this complaint
             cluster.
           </p>
           <button
@@ -155,7 +156,7 @@ function AdvisorySection({ id, cluster }) {
         <div className="flex items-center gap-3 py-6 px-4 bg-surface/60 rounded-lg">
           <Spinner size="md" />
           <p className="text-ink-700 text-sm">
-            Gemini is analyzing complaint patterns…
+            DeepSeek is analyzing complaint patterns…
           </p>
         </div>
       )}
@@ -481,6 +482,11 @@ export default function ClusterDetail({ id, onBack }) {
       </section>
 
       <AdvisorySection id={cluster.id ?? id} cluster={cluster} />
+
+      <ClusterChatPanel
+        clusterId={cluster.id ?? id}
+        clusterLabel={cluster.label}
+      />
     </div>
   );
 }

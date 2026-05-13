@@ -2,17 +2,20 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query, status
 
 from app.core.exceptions import ClusterNotFoundError
 from app.dependencies import DBSessionDep
 from app.schemas.cluster import (
     AdvisoryResponse,
+    ClusterChatRequest,
+    ClusterChatResponse,
     ClusterDetail,
     ClusterListResponse,
     TrendPoint,
 )
 from app.services.advisory_service import generate_advisory
+from app.services.cluster_chat_service import chat_with_cluster
 from app.services.cluster_service import (
     get_cluster_detail,
     get_cluster_trend,
@@ -68,6 +71,40 @@ async def get_trend(
     days: int = Query(default=30, ge=1, le=180),
 ) -> list[TrendPoint]:
     return await get_cluster_trend(cluster_id, session, days=days)
+
+
+@router.post(
+    "/{cluster_id}/chat",
+    response_model=ClusterChatResponse,
+    summary="Analytics chatbot — converse about a cluster with full context",
+)
+async def chat_about_cluster(
+    cluster_id: int,
+    payload: ClusterChatRequest,
+    session: DBSessionDep,
+) -> ClusterChatResponse:
+    """Send a question to the analytics co-pilot.
+
+    The bot is grounded in the cluster's label, member count, sentiment,
+    14-day trend, top SKUs/regions, and a handful of PII-redacted sample
+    complaints. Prior chat turns are passed in by the client (stateless API).
+    """
+    try:
+        result = await chat_with_cluster(
+            session,
+            cluster_id=cluster_id,
+            history=[turn.model_dump() for turn in payload.history],
+            user_message=payload.message,
+        )
+    except ClusterNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
+    return ClusterChatResponse(**result)
 
 
 @router.get(

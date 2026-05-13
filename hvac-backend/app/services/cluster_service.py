@@ -50,12 +50,27 @@ async def list_clusters(
     limit: int = 50,
     offset: int = 0,
 ) -> ClusterListResponse:
-    """Return a paginated list of clusters with optional filters."""
+    """Return a paginated list of clusters with optional filters.
+
+    Defaults to clusters from the most recent run only. Without this filter the
+    table accumulates orphan rows from prior runs (centroids changed → new row
+    inserted, old row left behind) and the dashboard floods with stale clusters.
+    Callers wanting cross-run history can pass an explicit ``run_id``.
+    """
     q = select(Cluster)
     if is_emerging is not None:
         q = q.where(Cluster.is_emerging == is_emerging)
     if run_id is not None:
         q = q.where(Cluster.last_run_id == run_id)
+    else:
+        # run_id strings sort lexicographically by time (run_YYYYMMDD_HHMMSS_…),
+        # so MAX() picks the most recent batch.
+        latest_run = (
+            select(func.max(Cluster.last_run_id))
+            .where(Cluster.last_run_id.is_not(None))
+            .scalar_subquery()
+        )
+        q = q.where(Cluster.last_run_id == latest_run)
 
     count_result = await session.execute(select(func.count()).select_from(q.subquery()))
     total: int = count_result.scalar_one()
@@ -155,25 +170,43 @@ async def get_cluster_detail(
 async def get_cluster_trend(
     cluster_id: int, session: AsyncSession, days: int = 30
 ) -> list[TrendPoint]:
-    """Return ascending-by-date trend points for a cluster, last *days* days."""
+    """Return ascending-by-date trend points for a cluster, last *days* days.
+
+    Computed on the fly from complaints.created_at so the series reflects the
+    actual per-day arrival rate (not the cumulative trend_snapshot member_count,
+    which only ticks upward and produces a flat-ish line).
+    Days with no complaints are zero-filled so the chart renders a continuous
+    30-day x-axis.
+    """
     from datetime import date, timedelta
 
-    cutoff = date.today() - timedelta(days=days)
+    today = date.today()
+    cutoff = today - timedelta(days=days - 1)  # inclusive 30-day window
+
     rows = (
         await session.execute(
-            select(TrendSnapshot)
-            .where(
-                TrendSnapshot.cluster_id == cluster_id,
-                TrendSnapshot.snapshot_date >= cutoff,
+            select(
+                func.date(Complaint.created_at).label("day"),
+                func.count(Complaint.id).label("cnt"),
+                func.avg(Complaint.sentiment_score).label("avg_sent"),
             )
-            .order_by(TrendSnapshot.snapshot_date.asc())
+            .where(
+                Complaint.cluster_id == cluster_id,
+                Complaint.created_at >= cutoff,
+            )
+            .group_by("day")
         )
-    ).scalars().all()
-    return [
-        TrendPoint(
-            date=str(r.snapshot_date),
-            count=r.complaint_count,
-            avg_sentiment=r.avg_sentiment,
-        )
-        for r in rows
-    ]
+    ).all()
+
+    by_day: dict[date, tuple[int, float | None]] = {}
+    for day, cnt, avg_sent in rows:
+        # func.date() may return a date or an ISO string depending on driver.
+        d = day if isinstance(day, date) else date.fromisoformat(str(day))
+        by_day[d] = (int(cnt or 0), float(avg_sent) if avg_sent is not None else None)
+
+    series: list[TrendPoint] = []
+    for i in range(days):
+        d = cutoff + timedelta(days=i)
+        cnt, avg_sent = by_day.get(d, (0, None))
+        series.append(TrendPoint(date=str(d), count=cnt, avg_sentiment=avg_sent))
+    return series

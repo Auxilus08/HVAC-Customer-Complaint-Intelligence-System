@@ -9,7 +9,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import { useStats, useBuildings } from "../hooks/useAnalytics";
+import { useStats, useBuildings, useHeatmap, useSkus } from "../hooks/useAnalytics";
 import { useClusters } from "../hooks/useClusters";
 import { asArray, formatCompact, formatNumber } from "../utils/format";
 import { sourceLabel } from "../utils/sourceLabels";
@@ -85,6 +85,14 @@ function DataStripChart({ title, data, colorMap, labelFn, loading }) {
   );
 }
 
+function sentimentBar(score) {
+  if (score == null) return { label: "—", cls: "text-ink-400", bar: "bg-ink-200" };
+  if (score < -0.5) return { label: "Critical", cls: "text-red-500", bar: "bg-red-500" };
+  if (score < -0.2) return { label: "High", cls: "text-amber-500", bar: "bg-amber-400" };
+  if (score < 0.1) return { label: "Normal", cls: "text-ink-500", bar: "bg-ink-400" };
+  return { label: "Positive", cls: "text-green-600", bar: "bg-green-500" };
+}
+
 const TrendsTooltip = ({ active, payload }) => {
   if (!active || !payload?.length) return null;
   const d = payload[0].payload;
@@ -96,12 +104,128 @@ const TrendsTooltip = ({ active, payload }) => {
   );
 };
 
+function TopRegionsPanel({ data, loading }) {
+  const rows = useMemo(
+    () => (data?.regions ?? []).slice(0, 8),
+    [data]
+  );
+  const max = rows[0]?.total_complaints || 1;
+
+  return (
+    <div className="bg-surface-card border border-surface-border rounded-xl p-6 shadow-sm flex flex-col">
+      <SectionHeading title="Top Complaint Regions" />
+      {loading ? (
+        <div className="space-y-3">
+          {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}
+        </div>
+      ) : rows.length === 0 ? (
+        <p className="text-ink-500 text-sm">No regional data available.</p>
+      ) : (
+        <div className="space-y-3">
+          {rows.map((r) => {
+            const sent = sentimentBar(r.avg_sentiment);
+            const pct = Math.round((r.total_complaints / max) * 100);
+            return (
+              <div key={r.region} className="flex items-center gap-3">
+                <div className="w-24 shrink-0 text-sm text-ink-900 font-medium truncate" title={r.region}>
+                  {r.region}
+                </div>
+                <div className="flex-1 h-2 bg-ink-100 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${sent.bar} opacity-80`}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+                <div className="w-14 text-right text-sm text-ink-700 font-medium shrink-0">
+                  {r.total_complaints.toLocaleString()}
+                </div>
+                <div className={`w-14 text-right text-xs shrink-0 ${sent.cls}`}>
+                  {sent.label}
+                </div>
+                {r.complaint_change_pct != null && (
+                  <div className={`w-14 text-right text-xs shrink-0 font-medium ${r.complaint_change_pct > 0 ? "text-red-500" : r.complaint_change_pct < 0 ? "text-green-600" : "text-ink-400"}`}>
+                    {r.complaint_change_pct > 0 ? "+" : ""}{r.complaint_change_pct}%
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const TREND_BADGE = {
+  worsening: { label: "Worsening", cls: "bg-red-50 text-red-600 border border-red-200" },
+  stable:    { label: "Stable",    cls: "bg-ink-100 text-ink-500 border border-ink-200" },
+  improving: { label: "Improving", cls: "bg-green-50 text-green-700 border border-green-200" },
+};
+
+function TopSkusPanel({ data, loading }) {
+  const rows = useMemo(
+    () => (data?.skus ?? []).slice(0, 8),
+    [data]
+  );
+  const max = rows[0]?.total_complaints || 1;
+
+  return (
+    <div className="bg-surface-card border border-surface-border rounded-xl p-6 shadow-sm flex flex-col">
+      <SectionHeading title="Top Problem SKUs" />
+      {loading ? (
+        <div className="space-y-3">
+          {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}
+        </div>
+      ) : rows.length === 0 ? (
+        <p className="text-ink-500 text-sm">No SKU data available.</p>
+      ) : (
+        <div className="space-y-3">
+          {rows.map((r) => {
+            const sent = sentimentBar(r.avg_sentiment);
+            const pct = Math.round((r.total_complaints / max) * 100);
+            const trend = TREND_BADGE[r.trend] ?? TREND_BADGE.stable;
+            return (
+              <div key={r.sku} className="flex items-center gap-3">
+                <div className="w-28 shrink-0">
+                  <div className="text-sm text-ink-900 font-medium truncate" title={r.sku}>{r.sku}</div>
+                  {r.top_issue && (
+                    <div className="text-[10px] text-ink-400 truncate" title={r.top_issue}>{r.top_issue}</div>
+                  )}
+                </div>
+                <div className="flex-1 h-2 bg-ink-100 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${sent.bar} opacity-80`}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+                <div className="w-12 text-right text-sm text-ink-700 font-medium shrink-0">
+                  {r.total_complaints.toLocaleString()}
+                </div>
+                {r.critical_count > 0 && (
+                  <div className="w-16 text-right text-xs text-red-500 shrink-0">
+                    {r.critical_count} crit
+                  </div>
+                )}
+                <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0 ${trend.cls}`}>
+                  {trend.label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function OverviewView() {
   const navigate = useNavigate();
   const onTabChange = (tab) => navigate(`/${tab}`);
   const statsQ = useStats();
   const clustersQ = useClusters({ limit: 10 });
   const buildingsQ = useBuildings();
+  const heatmapQ = useHeatmap();
+  const skusQ = useSkus();
 
   const s = statsQ.data || {};
   const statsLoading = statsQ.isLoading;
@@ -288,6 +412,12 @@ export default function OverviewView() {
             loading={buildingsQ.isLoading}
           />
         </div>
+      </div>
+
+      {/* Regions + SKUs */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <TopRegionsPanel data={heatmapQ.data} loading={heatmapQ.isLoading} />
+        <TopSkusPanel data={skusQ.data} loading={skusQ.isLoading} />
       </div>
     </div>
   );

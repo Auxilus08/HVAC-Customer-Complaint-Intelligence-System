@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   Layers,
   Map,
+  MessageSquare,
   Search,
   Upload,
   ChevronsLeft,
@@ -26,6 +27,7 @@ const NAV_ITEMS = [
   { to: "/themes", label: "Themes", icon: Layers },
   { to: "/map", label: "Map", icon: Map },
   { to: "/search", label: "Search", icon: Search },
+  { to: "/inbox", label: "Support Inbox", icon: MessageSquare },
 ];
 
 function LivePill() {
@@ -84,6 +86,12 @@ function Breadcrumbs() {
     segments.push({ label: "Map" });
   } else if (path.startsWith("/search")) {
     segments.push({ label: "Search" });
+  } else if (path.startsWith("/inbox")) {
+    segments.push({ label: "Support Inbox", to: "/inbox" });
+    const inboxMatch = path.match(/^\/inbox\/(\d+)/);
+    if (inboxMatch) {
+      segments.push({ label: `Ticket #${inboxMatch[1]}` });
+    }
   } else {
     segments.push({ label: "Not Found" });
   }

@@ -59,3 +59,24 @@ class AdvisoryResponse(BaseModel):
 class ClusterListResponse(BaseModel):
     total: int
     clusters: list[ClusterSummary]
+
+
+class ChatTurn(BaseModel):
+    """One previous message in the analytics chatbot session."""
+
+    role: str = Field(..., pattern="^(user|assistant)$")
+    content: str = Field(..., min_length=1, max_length=8000)
+
+
+class ClusterChatRequest(BaseModel):
+    """POST body for /clusters/{id}/chat — analyst question + prior turns."""
+
+    message: str = Field(..., min_length=1, max_length=4000)
+    history: list[ChatTurn] = Field(default_factory=list, max_length=40)
+
+
+class ClusterChatResponse(BaseModel):
+    cluster_id: int
+    reply: str
+    generated_at: datetime
+    model: str

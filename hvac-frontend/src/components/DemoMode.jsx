@@ -23,7 +23,7 @@ const STEPS = [
   {
     delay: 17000,
     anchor: "advisory",
-    tooltip: "Generating Gemini field advisory…",
+    tooltip: "Generating DeepSeek field advisory…",
     action: "click-generate",
   },
   {

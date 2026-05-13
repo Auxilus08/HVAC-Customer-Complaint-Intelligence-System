@@ -19,6 +19,7 @@ SOURCE_CHOICES = Literal[
     "cpsc",
     "app_store",
     "synthetic",
+    "telegram",
 ]
 SENTIMENT_LABEL_CHOICES = Literal["CRITICAL", "HIGH", "NORMAL", "POSITIVE"]
 STATUS_CHOICES = Literal["pending", "embedded", "processed"]

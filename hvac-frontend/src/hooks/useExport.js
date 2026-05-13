@@ -60,7 +60,7 @@ export const exportAdvisoryText = (advisoryText, cluster) => {
     "=====================",
     `Cluster: ${label}`,
     `Generated: ${date}`,
-    "Powered by: Gemini 2.5 Flash Lite",
+    "Powered by: DeepSeek",
     "",
     advisoryText.replace(/^##\s*/gm, "").replace(/\*\*/g, ""),
   ];

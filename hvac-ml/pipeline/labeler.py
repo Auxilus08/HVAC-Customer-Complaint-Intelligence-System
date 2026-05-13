@@ -28,8 +28,14 @@ DEFAULT_MODEL = "gemini-2.5-flash"
 DEFAULT_JACCARD_THRESHOLD = 0.2
 
 _LABEL_SYSTEM_PROMPT = (
-    "These HVAC complaints belong to the same pattern. "
-    "Give a 3-5 word label describing the common issue. "
+    "You are labeling a cluster of HVAC service complaints. "
+    "Describe the underlying TECHNICAL FAULT in the air-conditioning unit "
+    "(e.g. 'Compressor noise outdoor unit', 'Refrigerant leak indoor coil', "
+    "'Breaker trips on startup', 'Drain pan water overflow', "
+    "'Installation pipe insulation missing'). "
+    "Use 3-5 words. Do NOT describe the data itself — never use words like "
+    "'duplicate', 'repeat', 'similar', 'multiple', 'building-wide', "
+    "'complaints', 'reports', 'pattern'. "
     "Return ONLY the label, no punctuation, no quotes."
 )
 

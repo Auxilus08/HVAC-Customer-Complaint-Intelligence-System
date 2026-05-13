@@ -54,6 +54,12 @@ class _KwargAdapter:
 logger = _KwargAdapter(_celery_logger)
 settings = get_settings()
 
+# Max cosine distance between two run centroids for them to be treated as the
+# same cluster across runs. 0.10 ≈ cosine similarity 0.90 — loose enough that
+# small membership shifts reuse the existing row, tight enough that genuinely
+# distinct patterns stay separate.
+CENTROID_MATCH_MAX_DISTANCE = 0.10
+
 
 class ClusterTask(Task):
     abstract = True
@@ -139,20 +145,41 @@ def run_nightly_batch(self: ClusterTask) -> dict:  # type: ignore[misc]
                     "clusterer returned arrays whose length does not match input ids"
                 )
 
-            # ── Upsert cluster rows (match by fingerprint to avoid unbounded growth)
+            # ── Upsert cluster rows (match by centroid similarity, not exact
+            # fingerprint). Exact-hash matching is fragile: any single-member
+            # shift produces a brand-new SHA-256 → a new row → the previous row
+            # is abandoned. Centroid cosine match reuses the same row as long as
+            # the cluster's *meaning* (its mean embedding) hasn't drifted past
+            # CENTROID_MATCH_MAX_DISTANCE.
             cluster_id_map: dict[int, int] = {}  # hdbscan_label -> DB id
+            claimed_cluster_ids: set[int] = set()
             for hdb_label, size in cluster_result.cluster_sizes.items():
                 mask = cluster_result.labels == hdb_label
                 centroid = embeddings[mask].mean(axis=0).tolist()
                 fp_hash = cluster_result.fingerprints[hdb_label]
 
-                # Try to find an existing cluster with the same fingerprint.
-                existing_result = await session.execute(
-                    select(Cluster).where(
-                        Cluster.fingerprint_hash == fp_hash
-                    ).limit(1)
+                # Find the nearest existing cluster by cosine distance. Exclude
+                # rows already claimed by another HDBSCAN label in this run.
+                nearest_q = (
+                    select(
+                        Cluster.id,
+                        Cluster.centroid.cosine_distance(centroid).label("dist"),
+                    )
+                    .where(Cluster.centroid.is_not(None))
+                    .order_by("dist")
+                    .limit(1)
                 )
-                existing = existing_result.scalar_one_or_none()
+                if claimed_cluster_ids:
+                    nearest_q = nearest_q.where(
+                        Cluster.id.notin_(claimed_cluster_ids)
+                    )
+                nearest_row = (await session.execute(nearest_q)).first()
+
+                existing = None
+                if nearest_row is not None:
+                    nearest_id, dist = nearest_row
+                    if dist is not None and float(dist) <= CENTROID_MATCH_MAX_DISTANCE:
+                        existing = await session.get(Cluster, nearest_id)
 
                 if existing is not None:
                     # Update existing cluster row in place.
@@ -160,7 +187,9 @@ def run_nightly_batch(self: ClusterTask) -> dict:  # type: ignore[misc]
                     existing.member_count = int(size)
                     existing.last_run_id = run_id
                     existing.is_emerging = False
+                    existing.fingerprint_hash = fp_hash
                     cluster_id_map[hdb_label] = existing.id
+                    claimed_cluster_ids.add(existing.id)
                 else:
                     # Genuinely new cluster pattern — create a new row.
                     cluster_row = Cluster(
@@ -173,6 +202,7 @@ def run_nightly_batch(self: ClusterTask) -> dict:  # type: ignore[misc]
                     session.add(cluster_row)
                     await session.flush()
                     cluster_id_map[hdb_label] = cluster_row.id
+                    claimed_cluster_ids.add(cluster_row.id)
 
             # ── Update complaints with cluster assignments ─────────────────
             for i, complaint_id in enumerate(ids):

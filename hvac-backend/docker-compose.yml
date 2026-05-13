@@ -58,7 +58,11 @@ services:
     volumes:
       - redis_data:/data
     ports:
-      - "6379:6379"
+      # Bind to localhost only — previous "6379:6379" exposed Redis to the public
+      # internet without auth, which was the Kinsing miner entry vector (2026-05-04).
+      # The docker bridge network (172.x) still reaches redis via the internal
+      # hostname "redis:6379", so backend/workers/celery-beat all keep working.
+      - "127.0.0.1:6379:6379"
     networks:
       - hvac_network
     restart: unless-stopped
@@ -126,6 +130,20 @@ services:
       --concurrency=1
       --loglevel=info
       --hostname=batch@%h
+
+  # ── Celery: Telegram bot worker (long-polling getUpdates + handlers) ─────────
+  telegram-worker:
+    <<: *backend-base
+    container_name: hvac_telegram_worker
+    volumes:
+      - logs:/app/logs
+    command: >
+      celery -A app.workers.celery_app.celery_app worker
+      --queues=telegram
+      --concurrency=2
+      --loglevel=info
+      --logfile=/app/logs/telegram_worker.log
+      --hostname=telegram@%h
 
   # ── Celery Beat scheduler ────────────────────────────────────────────────────
   celery-beat:

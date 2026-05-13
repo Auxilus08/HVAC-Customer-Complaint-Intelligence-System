@@ -9,3 +9,6 @@ export const getAdvisory = (id) => client.get(`/clusters/${id}/advisory`);
 
 export const getClusterTrend = (id, days = 30) =>
   client.get(`/clusters/${id}/trend`, { params: { days } });
+
+export const sendClusterChatMessage = (id, message, history) =>
+  client.post(`/clusters/${id}/chat`, { message, history });

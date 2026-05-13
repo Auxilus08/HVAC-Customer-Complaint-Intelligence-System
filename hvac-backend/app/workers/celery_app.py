@@ -17,6 +17,24 @@ def create_celery_app(settings: Settings | None = None) -> Celery:
 
     app = Celery("hvac_workers")
 
+    beat_schedule: dict = {
+        "nightly-batch-pipeline": {
+            "task": "app.workers.cluster_job.run_nightly_batch",
+            "schedule": crontab(hour=2, minute=0),
+            "options": {"queue": "batch"},
+        }
+    }
+
+    if settings.TELEGRAM_ENABLED:
+        # Schedule getUpdates long-poll on a tight interval. The task itself
+        # blocks for up to TELEGRAM_LONG_POLL_TIMEOUT_SECONDS, so a 2s schedule
+        # effectively gives a constant connection without spamming Telegram.
+        beat_schedule["telegram-poll-updates"] = {
+            "task": "app.workers.telegram_poll_worker.poll_updates",
+            "schedule": float(settings.TELEGRAM_POLL_INTERVAL_SECONDS),
+            "options": {"queue": "telegram"},
+        }
+
     app.conf.update(
         broker_url=settings.CELERY_BROKER_URL,
         result_backend=settings.CELERY_RESULT_BACKEND,
@@ -34,16 +52,11 @@ def create_celery_app(settings: Settings | None = None) -> Celery:
             "app.workers.cluster_job.*": {"queue": "batch"},
             "app.workers.label_job.*": {"queue": "batch"},
             "app.workers.trend_job.*": {"queue": "batch"},
+            "app.workers.telegram_poll_worker.*": {"queue": "telegram"},
         },
         # Dead-letter: failed tasks go to a dedicated DLQ queue via Redis
         task_reject_on_worker_lost=True,
-        beat_schedule={
-            "nightly-batch-pipeline": {
-                "task": "app.workers.cluster_job.run_nightly_batch",
-                "schedule": crontab(hour=2, minute=0),
-                "options": {"queue": "batch"},
-            }
-        },
+        beat_schedule=beat_schedule,
     )
 
     app.autodiscover_tasks(
@@ -53,6 +66,7 @@ def create_celery_app(settings: Settings | None = None) -> Celery:
             "app.workers.cluster_job",
             "app.workers.label_job",
             "app.workers.trend_job",
+            "app.workers.telegram_poll_worker",
         ]
     )
 

@@ -70,16 +70,21 @@ def compute_trends(self: TrendTask, run_id: str) -> dict:  # type: ignore[misc]
                 return {"run_id": run_id, "emerging_clusters": 0}
 
             # Pull all in-window complaint rows once and feed to TrendDetector.
+            # sentiment_label and region are required for the tiered cost model.
             complaints_result = await session.execute(
                 select(
                     Complaint.cluster_id,
                     Complaint.created_at,
                     Complaint.sentiment_score,
+                    Complaint.sentiment_label,
+                    Complaint.region,
                 ).where(Complaint.cluster_id.in_(cluster_ids))
             )
             rows = complaints_result.fetchall()
             df = pd.DataFrame(
-                rows, columns=["cluster_id", "created_at", "sentiment_score"]
+                rows,
+                columns=["cluster_id", "created_at", "sentiment_score",
+                         "sentiment_label", "region"],
             )
 
             detector = TrendDetector()

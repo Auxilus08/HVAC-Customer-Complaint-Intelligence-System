@@ -6,6 +6,7 @@ import GeographicView from "./components/GeographicView";
 import DrilldownMap from "./components/DrilldownMap";
 import DemoMode from "./components/DemoMode";
 import ErrorBoundary from "./components/ui/ErrorBoundary";
+import SupportInboxView from "./components/SupportInboxView";
 import ThemesPage from "./pages/ThemesPage";
 import SearchPage from "./pages/SearchPage";
 import NotFoundPage from "./pages/NotFoundPage";
@@ -58,6 +59,22 @@ export default function App() {
             }
           />
           <Route path="search" element={<SearchPage />} />
+          <Route
+            path="inbox"
+            element={
+              <ErrorBoundary>
+                <SupportInboxView />
+              </ErrorBoundary>
+            }
+          />
+          <Route
+            path="inbox/:ticketId"
+            element={
+              <ErrorBoundary>
+                <SupportInboxView />
+              </ErrorBoundary>
+            }
+          />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>

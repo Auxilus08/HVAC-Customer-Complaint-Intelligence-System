@@ -28,7 +28,8 @@ _TEST_ASYNC_URL = (
     "postgresql+asyncpg://hvac_user:change_me_in_production@localhost:5432/hvac_test"
 )
 _TRUNCATE_SQL = (
-    "TRUNCATE TABLE complaints, clusters, umap_coords, trend_snapshots, batch_run_log "
+    "TRUNCATE TABLE complaints, clusters, umap_coords, trend_snapshots, "
+    "batch_run_log, support_messages, support_conversations, products "
     "RESTART IDENTITY CASCADE"
 )
 
@@ -41,6 +42,9 @@ def _sync_setup_schema() -> None:
         BatchRunLog,
         Cluster,
         Complaint,
+        Product,
+        SupportConversation,
+        SupportMessage,
         TrendSnapshot,
         UmapCoord,
     )

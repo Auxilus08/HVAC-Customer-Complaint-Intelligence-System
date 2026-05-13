@@ -53,7 +53,12 @@ class Settings(BaseSettings):
 
     # Qwen / Alibaba DashScope — https://dashscope-intl.aliyuncs.com/
     QWEN_API_KEY: str = Field(default="")
-    QWEN_MODEL: str = Field(default="qwen-plus")
+    # Text model used for chat/triage/classification.
+    QWEN_MODEL: str = Field(default="qwen-max-latest")
+    # Vision-capable model for OCR / product nameplate analysis. Separate from
+    # the text model because the vision model is slower and more expensive —
+    # only invoked when a customer actually sends a photo.
+    QWEN_VISION_MODEL: str = Field(default="qwen-vl-max-latest")
     QWEN_BASE_URL: str = Field(default="https://dashscope-intl.aliyuncs.com/compatible-mode/v1")
 
     # Google Gemini (backward compat aliases) — https://aistudio.google.com/
@@ -90,6 +95,14 @@ class Settings(BaseSettings):
 
     # ── Celery Beat ───────────────────────────────────────────────────────────
     CLUSTER_JOB_CRON: str = Field(default="0 2 * * *")
+
+    # ── Telegram support bot ──────────────────────────────────────────────────
+    TELEGRAM_BOT_TOKEN: str = Field(default="")
+    TELEGRAM_ENABLED: bool = Field(default=False)
+    TELEGRAM_POLL_INTERVAL_SECONDS: int = Field(default=2)
+    TELEGRAM_LONG_POLL_TIMEOUT_SECONDS: int = Field(default=25)
+    TELEGRAM_API_BASE_URL: str = Field(default="https://api.telegram.org")
+    TELEGRAM_AI_CONFIDENCE_THRESHOLD: float = Field(default=0.65)
 
     @field_validator("LLM_PROVIDER", mode="before")
     @classmethod
